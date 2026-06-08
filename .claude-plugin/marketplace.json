@@ -1,6 +1,7 @@
 {
   "name": "agentic-agile-marketplace",
   "owner": { "name": "Adeel Ahmad" },
+  "description": "Agentic agile planning + autonomous TDD execution for Claude Code, with deterministic hook gates.",
   "plugins": [
     {
       "name": "agentic-agile",
