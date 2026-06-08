@@ -20,6 +20,28 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.2.1] - 2026-06-08
+
+### Fixed
+- **Plugin failed to load: duplicate hooks file.** `plugin.json` declared
+  `"hooks": "./hooks/hooks.json"`, but Claude Code auto-loads the standard
+  `hooks/hooks.json` by convention — the manifest declaration loaded it a second time
+  and the plugin refused to load. Removed the redundant `manifest.hooks` entry. Caught
+  by a live `claude plugin install` smoke test; static `claude plugin validate` passes
+  either way.
+
+### Added
+- **Eval suites** (agentskills.io style): expanded the skill suite to 7 cases
+  (`plugin/skills/agentic-agile/evals/`) and added per-agent suites for all 9 agents
+  (`plugin/evals/agents/*.json`) plus a shared harness (`scripts/eval/`) and
+  `make eval-validate` / `make eval`.
+- **Vendored `md-db`** (`plugin/tools/md-db/`, AGPL-3.0): `make install` now builds
+  both gate backends from source; md-db is no longer an external prerequisite.
+
+### Changed
+- `make test` runs both Rust crates; `make ci` now includes `eval-validate`.
+- Marketplace gained a `description`; plugin manifest gained `homepage`/`repository`.
+
 ## [0.2.0]
 
 ### Added
