@@ -48,6 +48,27 @@ Build the `agentic-agile` Claude Code plugin from the DESIGN package.
 
 ---
 
+### Session 3 — 2026-06-08: Eval suites for the skill + all 9 agents
+**What:** Added agentskills.io-style evals across the plugin. Expanded the skill suite
+`plugin/skills/agentic-agile/evals/evals.json` from 3 → 7 cases (happy/edge/negative +
+a spec-file fixture). Authored 9 per-agent suites at `plugin/evals/agents/<role>.json`
+(3 cases each — happy/edge/negative, the negative case probing each agent's hard limit;
+101 assertions total) and `plugin/evals/README.md`. Built a shared harness in
+`scripts/eval/`: `run-evals.sh` (with_skill vs without_skill via `claude -p
+--append-system-prompt`, gated behind `--yes`), `grade.py` (strict LLM judge, `--dry-run`
+plumbing mode), `aggregate.py` → `benchmark.json`, `_extract.py`, and
+`validate-suites.py`. Makefile gained `eval-validate` (no tokens) + `eval SUITE=…`.
+**Decisions:** agent evals live in `plugin/evals/`, NOT `plugin/agents/` — avoids any
+chance of a stray file being parsed as a bogus agent. Live runs NOT executed (token
+cost; await user OK). File paths in evals.json are skill-root-relative (agentskills.io).
+**Verified:** `make eval-validate` OK (10 suites); shellcheck clean; all .py compile;
+grade(--dry-run)→aggregate plumbing proven on synthetic data; plan-mode run exits 0
+without spending tokens. `eval-workspace/` git-ignored.
+**Files:** plugin/evals/* (new), plugin/skills/agentic-agile/evals/{evals.json,files/spec.md},
+scripts/eval/* (new), Makefile, .gitignore.
+
+---
+
 ### Session 2 — 2026-06-08: Vendor md-db so `make install` is self-contained
 **What:** `make install` failed (cargo 1.77 couldn't read a v4 Cargo.lock; md-db was an
 unbuildable external prereq). Vendored `decisiongraph/md-db-rs` into `plugin/tools/md-db/`

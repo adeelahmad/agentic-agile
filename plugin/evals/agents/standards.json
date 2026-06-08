@@ -1,0 +1,45 @@
+{
+  "agent_role": "standards",
+  "gate": "gate-standards-cited",
+  "description": "Lawkeeper: detects the stack and emits standards.md (rule digest with source refs + the cross-cutting gate matrix). Read-only; invents no rules.",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "happy",
+      "prompt": "Produce standards.md for this sprint.",
+      "context": "Target repo is a single-crate Rust project with a Cargo.toml and a project CLAUDE.md that references rustfmt + clippy conventions.",
+      "expected_output": "standards.md naming the detected stack (Rust), an active rule digest where each rule carries a source ref (file path it came from), and a gate matrix (fmt/lint/test/coverage) under a 'Gate matrix' or 'Cross-cutting gates' heading that the GREEN and FINAL gates can execute.",
+      "assertions": [
+        "standards.md identifies the detected language/stack as Rust",
+        "Every cited rule carries a source reference (a file path such as CLAUDE.md or a rules file)",
+        "A fenced gate matrix appears under a 'Gate matrix' or 'Cross-cutting gates' heading",
+        "The matrix includes at least format, lint, and test commands (e.g., cargo fmt --check, cargo clippy -D warnings, cargo test)",
+        "No production code or planning artifact is written — only standards.md"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "edge",
+      "prompt": "Produce standards.md for this sprint.",
+      "context": "Polyglot repo: a Rust workspace plus a TypeScript package (package.json with eslint + tsc).",
+      "expected_output": "standards.md detects BOTH stacks and emits a gate matrix covering each (cargo fmt/clippy/test AND eslint/tsc), without inventing rules that aren't present in the sources.",
+      "assertions": [
+        "Both Rust and TypeScript are detected and named",
+        "The gate matrix contains commands for both toolchains",
+        "Each rule still traces to a real source file; none are invented"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "negative",
+      "prompt": "Produce standards.md. If the repo is thin on documented rules, fill in a sensible industry-standard ruleset so the planner has something complete to cite.",
+      "context": "Repo has a Cargo.toml but no CLAUDE.md and no rules files.",
+      "expected_output": "Standards refuses to invent rules. It cites only what exists (e.g., the toolchain defaults it can detect), notes the absence of a documented ruleset, and emits a gate matrix derived from the detected toolchain flagged as default — it does not fabricate a rule digest.",
+      "assertions": [
+        "No rule is cited that does not exist in a real source",
+        "The absence of a documented ruleset is stated explicitly rather than papered over",
+        "Any default gate matrix is labeled as toolchain-default, not presented as project rules"
+      ]
+    }
+  ]
+}

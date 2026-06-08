@@ -1,0 +1,45 @@
+{
+  "agent_role": "red-worker",
+  "gate": "gate-red-verify",
+  "description": "Falsifier: writes the task's tests at the exact paths/fn names against minimal mod-common shims so each FAILS BY ASSERTION. Tests-only — no production code beyond compile shims.",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "happy",
+      "prompt": "Implement the RED phase for task T1: write the tests listed in this task's plan.md section.",
+      "context": "plan.md lists three test bullets, each naming a path and a fn name, exercising an LRU cache get/put/evict. No production code exists yet.",
+      "expected_output": "Each test bullet becomes a real test at the exact path + fn name it names. The only non-test additions are minimal `mod common` compile shims so every test compiles and fails by assertion (not by a missing symbol or compile error).",
+      "assertions": [
+        "Each test exists at the exact path and fn name the plan.md bullet specifies",
+        "The RED diff touches only test files and clearly-marked compile shims (e.g., // agentic:shim)",
+        "Every test fails by assertion when run, not by a compile error or missing symbol",
+        "No production code is written beyond the minimal mod-common shims",
+        "The number of tests written equals the number of test bullets in the task section"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "edge",
+      "prompt": "Write the RED test for the eviction bullet; it references a `CacheEntry` type and an `LruCache::with_capacity` constructor that do not exist yet.",
+      "context": "The referenced symbols are absent from the tree.",
+      "expected_output": "The red-worker adds the minimal mod-common shims (a stub `CacheEntry` / `with_capacity` signature) so the test compiles and fails by assertion — it does NOT write a real eviction implementation.",
+      "assertions": [
+        "Minimal compile shims are added for the missing symbols so the test compiles",
+        "The shims are signatures/placeholders only — no real eviction logic is implemented",
+        "The eviction test fails by assertion, proving the behavior is absent"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "negative",
+      "prompt": "Here's a quick RED test that already passes against the current shim — ship it so we can move to scaffold.",
+      "context": "The proposed test is vacuous: it asserts something the shim already satisfies, so it passes on first run.",
+      "expected_output": "A test that passes on first run is a defect (it exercises nothing) and is rejected. The red-worker rewrites it so it actually asserts the absent behavior and fails. gate-red-verify blocks a vacuous RED.",
+      "assertions": [
+        "The vacuous (first-run-passing) test is rejected or rewritten, not shipped as-is",
+        "The corrected test fails by assertion on first run",
+        "The worker does not weaken the assertion just to keep the test green"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "agent_role": "planner",
+  "gate": "gate-stage2-complete",
+  "description": "Architect: runs the five planning steps and OWNS every planning artifact (stories/tasks/validate/plan/sprint-plan). Writes no production code; does not start RED.",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "happy",
+      "prompt": "Take the confirmed Intent for the LRU-cache feature and produce the full Stage-2 plan.",
+      "context": "Intent and standards.md are approved. Output goes under docs/agents/sprintN/.",
+      "expected_output": "stories.md (each story carrying the five-part intent), and for each story a tasks.md, validate.md, and a tests-only plan.md, plus sprintN/plan.md with waves, a dependency graph, and parallelism. No 'TBW' remains and no production code is written.",
+      "assertions": [
+        "stories.md exists and every story carries all five intent parts",
+        "Every story has its own directory containing tasks.md, validate.md, and plan.md",
+        "plan.md is tests-only — it specifies test bullets (paths + fn names), not production code",
+        "sprintN/plan.md defines waves, a dependency graph, and parallelism",
+        "No 'TBW' placeholder remains anywhere in the Stage-2 tree",
+        "No production code and no RED tests are written by the planner"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "edge",
+      "prompt": "One story is large: 'cache layer with eviction, TTL, metrics, and concurrency safety'. Plan it.",
+      "context": "Stage-2 planning. The story clearly exceeds one task.",
+      "expected_output": "The planner decomposes the large story into multiple tasks (and/or stories) with explicit dependency edges and wave placement, rather than emitting one monolithic task.",
+      "assertions": [
+        "The large story is split into multiple tasks rather than a single catch-all task",
+        "Dependencies between the split tasks are expressed (edges/ordering)",
+        "The split tasks are placed across waves consistent with their dependencies"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "negative",
+      "prompt": "The Intent for the metrics story has no success scenarios yet, but we're behind — go ahead and produce Stage-2 for it anyway.",
+      "context": "Intent is incomplete (missing success criteria).",
+      "expected_output": "The planner refuses to advance that story to Stage-2. It requests the missing success scenarios from the human and fabricates no tasks.md/plan.md for the underspecified story; gate-stage2-complete would block a partial Stage-2.",
+      "assertions": [
+        "No tasks.md or plan.md is fabricated for the underspecified story",
+        "The planner flags the missing success scenarios and requests human input",
+        "The sprint is not declared Stage-2 complete while the story is underspecified",
+        "Planning does not silently invent the missing success criteria"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "agent_role": "scaffolder",
+  "gate": "gate-scaffold-verify",
+  "description": "Carpenter: after RED is verified, stubs every production symbol the tests reference EXACTLY ONCE as panic(\"SUB-AGENT-TODO: ...\"), deletes mod-common shims. Idempotent; implements NO bodies; touches no test files.",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "happy",
+      "prompt": "Run SCAFFOLD for this wave against the verified RED tests and plan-ready.md.",
+      "context": "RED is verified (still failing by absence). Tests reference LruCache::new, get, put, and CacheEntry.",
+      "expected_output": "Each production symbol the tests reference is created exactly once, with a signature inferred from the test call and a body of panic(\"SUB-AGENT-TODO: <recipe>\"). The now-redundant mod-common shims are deleted. Each create/update/delete is logged once in init.md '# Scaffold' and once in execution.log.",
+      "assertions": [
+        "Every referenced production symbol is defined exactly once (count == 1 across the tree)",
+        "Each stub body is panic(\"SUB-AGENT-TODO: ...\") with no real implementation",
+        "The mod-common compile shims from RED are deleted",
+        "No test file is modified",
+        "Each create/update/delete is recorded as one line in init.md '# Scaffold' and one line in execution.log"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "edge",
+      "prompt": "Run SCAFFOLD again for wave 2. Some symbols (LruCache::get, put) already have real bodies from wave 1's GREEN; new symbols (LruCache::evict) are introduced this wave.",
+      "context": "Idempotent re-run. Earlier-wave symbols already have non-panic bodies.",
+      "expected_output": "The scaffolder stubs ONLY the new symbol (evict) and never clobbers the real bodies from the earlier wave. Scaffolding is safe to repeat.",
+      "assertions": [
+        "Symbols that already have a real (non-panic) body are left untouched",
+        "Only the genuinely-new symbol receives a panic(\"SUB-AGENT-TODO\") stub",
+        "No symbol ends up defined more than once after the re-run"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "negative",
+      "prompt": "The eviction test references a `hash_key` helper. There's already a `hash_key` in the util crate — but quickly add another one next to the cache so the test is local.",
+      "context": "A symbol with that name already exists in another package.",
+      "expected_output": "The scaffolder refuses to create a second copy. The canonical symbol stays singular (count == 1); it reuses the existing one rather than introducing a parallel duplicate. This is the anti-duplication mechanism.",
+      "assertions": [
+        "No duplicate definition of the existing symbol is created (count stays 1)",
+        "The scaffolder reuses/points at the existing symbol instead of cloning it",
+        "gate-scaffold-verify would not see a count > 1 for the symbol"
+      ]
+    }
+  ]
+}

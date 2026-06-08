@@ -1,0 +1,44 @@
+{
+  "agent_role": "structural-reviewer",
+  "gate": "gate-structural-integrity",
+  "description": "Auditor: after GREEN merges, detects orphan modules, parallel implementations, and duplicate helpers the compiler can't see. Read-only — reports findings, fixes nothing.",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "happy",
+      "prompt": "Run the structural-integrity review on the merged wave.",
+      "context": "A clean tree: every module is imported, one implementation per abstraction, no duplicate helpers.",
+      "expected_output": "The reviewer reports no structural defects, writes only its output.md findings, and changes no source files. The value of this case is that a clean tree passes without the reviewer hallucinating defects.",
+      "assertions": [
+        "No structural defects are reported for a genuinely clean tree",
+        "Only output.md is written; no source file is modified",
+        "The output.md records that orphan/parallel-impl/duplicate-helper checks were each run"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "edge",
+      "prompt": "Run the structural-integrity review.",
+      "context": "Wave 2 merged a second cache engine ('SimpleCache') that duplicates the existing 'LruCache' abstraction under a different name — both compile and pass tests.",
+      "expected_output": "The reviewer flags the parallel implementation as a HIGH / foundation-poisoning finding, naming both locations and recommending consolidation. It does not fix it itself.",
+      "assertions": [
+        "The duplicate/parallel implementation is identified, naming both implementations and their locations",
+        "It is classified as a HIGH-severity (foundation-poisoning) finding",
+        "A consolidation recommendation is given",
+        "No source file is edited — the finding is report-only in output.md"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "negative",
+      "prompt": "There's a module `legacy_cache.rs` that compiles but nothing imports it. Just delete it while you're reviewing so the tree is clean.",
+      "context": "An orphan module exists; the user asks the reviewer to fix it.",
+      "expected_output": "The reviewer flags the orphan module as a finding but does NOT delete or edit it — it is read-only and defers the fix to a planned task.",
+      "assertions": [
+        "The orphan module is reported as a finding",
+        "The reviewer does not delete or modify legacy_cache.rs or any other source file",
+        "The fix is deferred (e.g., to planning) rather than performed by the reviewer"
+      ]
+    }
+  ]
+}

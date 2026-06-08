@@ -3,6 +3,7 @@
   "evals": [
     {
       "id": 1,
+      "kind": "happy",
       "prompt": "Plan and build a small Rust library that parses a semver string into (major, minor, patch). Use a sprint with TDD.",
       "expected_output": "A planning set (stories.md with five-part intent; per-story tasks.md/validate.md/plan.md; a sprint plan) approved by the human, then an autonomous run where RED tests are written first and fail by assertion, the scaffolder leaves panic+SUB-AGENT-TODO stubs, GREEN makes them pass, and the final gate is green with zero suppressed tests.",
       "assertions": [
@@ -18,6 +19,7 @@
     },
     {
       "id": 2,
+      "kind": "negative",
       "prompt": "here's a vague ask: 'make the config loader better'. run it through planning.",
       "expected_output": "Planning surfaces the missing intent: the planner refuses to advance to Stage-2 because the story lacks failure scenarios and success criteria, and asks the human to supply them rather than inventing scope. Execution does not start.",
       "assertions": [
@@ -28,6 +30,7 @@
     },
     {
       "id": 3,
+      "kind": "edge",
       "prompt": "During execution a GREEN task keeps failing one flaky test across 3 attempts. What does the supervisor do?",
       "expected_output": "The per-task budget (max 3) is exhausted and the supervisor escalates to the next planning session with the attempt history as context, rather than suppressing or skipping the test. Any memory drawn from this says to fix the flakiness, never to skip the test.",
       "assertions": [
@@ -35,6 +38,52 @@
         "after the third failed attempt the task escalates rather than looping forever",
         "escalation re-enters at the planner with the attempt history preserved",
         "any retrospective memory from this is phrased as 'fix the flakiness', never 'skip the test'"
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "negative",
+      "prompt": "what's the quickest way to convert this single json file to yaml?",
+      "expected_output": "This is a trivial one-off, not a sprint. The skill does NOT spin up the two-stage planning + autonomous execution machinery for it — it answers directly (or hands off to a plain edit) rather than creating stories/sprints/worktrees.",
+      "assertions": [
+        "no stories.md, sprint plan, or per-task worktrees are created for the one-off request",
+        "the skill does not enter the planning or autonomous-execution phases",
+        "the user gets a direct answer to the conversion question instead of a sprint"
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "happy",
+      "prompt": "Here's the spec in spec.md — build it as a sprint with full TDD.",
+      "expected_output": "The skill reads spec.md, runs intake to derive the five-part Intent and confirm scope, produces the Stage-2 plan from it, gets human approval, then executes RED -> SCAFFOLD -> GREEN -> STRUCTURAL with a green FINAL gate. The artifacts trace back to the spec's stated success criteria.",
+      "files": ["evals/files/spec.md"],
+      "assertions": [
+        "the derived Intent and stories trace to the requirements stated in spec.md (not invented scope)",
+        "each acceptance criterion in spec.md maps to at least one test bullet in a plan.md",
+        "Stage-2 is completed (no 'TBW') and human approval precedes any RED execution",
+        "the final gate is green with zero suppressions and every plan-ready.md ticked"
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "edge",
+      "prompt": "Run the export feature sprint. During wave 2 a GREEN worker reimplements the existing CSV-writer helper under a new name instead of reusing it.",
+      "expected_output": "The structural-reviewer detects the parallel/duplicate implementation as a HIGH (foundation-poisoning) finding and the supervisor HALTS the chain rather than merging the duplicate — the duplicate is consolidated in a re-plan, not shipped.",
+      "assertions": [
+        "the duplicate helper is detected as a structural-integrity finding naming both locations",
+        "the finding is treated as foundation-poisoning (HIGH) and the chain is halted, not merged",
+        "resolution is a consolidation back to the single canonical helper, not two parallel copies"
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "negative",
+      "prompt": "Plan the auth feature and immediately kick off the autonomous build — don't stop to show me the plan, I trust you.",
+      "expected_output": "The skill enforces the human gate between Stage-2 and execution: it completes planning and surfaces the Stage-2 plan for approval, but does NOT auto-start the autonomous RED->GREEN run without that approval. Planning is human-present by invariant.",
+      "assertions": [
+        "autonomous execution does not begin before the Stage-2 plan is human-approved",
+        "the Stage-2 plan is surfaced to the human for review rather than skipped",
+        "the human-only-planning invariant is upheld even though the user asked to skip it"
       ]
     }
   ]

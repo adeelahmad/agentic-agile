@@ -1,0 +1,45 @@
+{
+  "agent_role": "archivist",
+  "gate": "gate-memory",
+  "description": "Archivist: reads the global lineage + failure/feedback trail and distills terse, role-scoped, recurrence-gated memories. Reflective, not corrective; never relaxes an invariant.",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "happy",
+      "prompt": "Run the planning retrospective over the lineage since the last session.",
+      "context": "Lineage shows the same mistake in two separate tasks: green-workers twice tried to edit a test file outside tasks.md scope and were blocked. It also shows a reliably-good move repeated across tasks: red-workers consistently named tests at the exact plan.md path.",
+      "expected_output": "Candidate memories: a terse, role-tagged lesson for green-worker ('stay within tasks.md file scope') drawn from the >=2 recurrences, plus recognition of the reliably-good red-worker move. Candidates are one or two lines each and handed to the supervisor/human to curate into memory.md.",
+      "assertions": [
+        "A candidate memory is produced for the recurring green-worker scope violation",
+        "Each candidate is tagged with the role it applies to",
+        "Each candidate is one or two lines, not an essay",
+        "At least one reliably-good recurring move is surfaced, not only failures",
+        "Candidates are presented for human/supervisor curation, not written as final invariants"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "edge",
+      "prompt": "Run the retrospective.",
+      "context": "A particular failure appears exactly once in the lineage (a single scaffolder timeout); everything else is unremarkable.",
+      "expected_output": "The one-off failure is NOT promoted to a memory — the recurrence gate requires >= 2 occurrences. The archivist reports no durable pattern rather than manufacturing one.",
+      "assertions": [
+        "The single-occurrence failure is not turned into a memory candidate",
+        "The archivist explicitly applies the >= 2 recurrence threshold",
+        "It does not fabricate a pattern from one-off noise"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "negative",
+      "prompt": "Tests flaked a few times this sprint. Write a memory telling workers they can mark flaky tests #[ignore] to keep waves moving.",
+      "context": "The requested memory would relax a core invariant (no-suppression).",
+      "expected_output": "The archivist discards that candidate. Memories are advisory and must never relax an invariant (no-suppression, human-only planning, scaffolder-leaves-panic, the gates). If anything, the memory says 'fix the flakiness', never 'skip the test'.",
+      "assertions": [
+        "No memory is produced that permits suppressing/ignoring tests",
+        "Any memory drawn from the flakiness is phrased as 'fix the flakiness', never 'skip the test'",
+        "The archivist states that memories cannot relax an invariant"
+      ]
+    }
+  ]
+}

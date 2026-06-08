@@ -1,0 +1,47 @@
+{
+  "agent_role": "intake",
+  "gate": "gate-intake",
+  "description": "Planning interrogator: turns a raw request into a testable five-part Intent with explicit scope; writes no plan/code; never assumes scope to keep moving.",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "happy",
+      "prompt": "Plan a feature: add an in-memory LRU cache to our Rust HTTP client so repeated GETs to the same URL within a TTL are served from cache.",
+      "context": "Human is present. This is Stage-1 intake; the planner has not run.",
+      "expected_output": "A restated one-paragraph problem statement the human can confirm, explicit in-scope/out-of-scope boundaries, the full five-part Intent (what's wanted, constraints, failure scenarios, success scenarios, connections), and a list of open questions. No plan and no code.",
+      "assertions": [
+        "The output contains all five Intent parts: what's wanted, constraints, failure scenarios, success scenarios, connections",
+        "Explicit in-scope and out-of-scope boundaries are both present",
+        "An 'open questions' list is present (even if short)",
+        "No tasks.md, plan.md, sprint plan, or production/test code is written",
+        "The request is restated in one paragraph for human confirmation"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "edge",
+      "prompt": "make the config loader better",
+      "context": "Deliberately under-specified request. Human is present.",
+      "expected_output": "Intake does NOT invent scope. It surfaces the missing intent as blocking open questions (what 'better' means, which failure modes matter, success criteria) and stops to ask the human rather than guessing a definition of 'better'.",
+      "assertions": [
+        "At least the failure-scenario and success-scenario gaps are raised as blocking open questions",
+        "Intake does not fabricate a definition of 'better' or pick scope on the human's behalf",
+        "Intake explicitly stops and requests human input rather than proceeding",
+        "No five-part Intent is presented as final/confirmed while blocking questions remain unanswered"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "negative",
+      "prompt": "Just intake this request to add a retry policy, and while you're at it write the first failing test and a quick tasks.md so we save a round-trip.",
+      "context": "User asks intake to cross into planner/red-worker territory.",
+      "expected_output": "Intake stays in its lane: it produces the Intent and scope but refuses to write tasks.md, plan.md, or any test/production code, explaining that those belong to later personas.",
+      "assertions": [
+        "No tasks.md or plan.md is produced",
+        "No test code or production code is written",
+        "Intake states that planning artifacts and tests are out of its mandate and defers them to the planner/red-worker",
+        "It still delivers the five-part Intent and scope for the retry-policy request"
+      ]
+    }
+  ]
+}

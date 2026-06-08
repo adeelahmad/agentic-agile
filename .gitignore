@@ -3,3 +3,5 @@
 .lineage/
 # rust build
 target/
+# generated eval runs (only the evals.json suites are tracked)
+eval-workspace/

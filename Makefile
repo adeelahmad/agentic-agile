@@ -85,6 +85,16 @@ validate: json ## claude plugin validate --strict
 .PHONY: ci
 ci: fmt-check lint test ## Run everything CI runs (except the live claude install)
 
+# ── Evals ──────────────────────────────────────────────────────────
+.PHONY: eval-validate
+eval-validate: ## Validate every eval suite's JSON (no tokens)
+	@python3 scripts/eval/validate-suites.py
+
+.PHONY: eval
+eval: ## Run an eval suite: make eval SUITE=<evals.json> [YES=1] (YES spends tokens)
+	@test -n "$(SUITE)" || { echo "set SUITE=<path to evals.json> (see plugin/evals/ or the skill's evals/)"; exit 2; }
+	@./scripts/eval/run-evals.sh --suite "$(SUITE)" $(if $(YES),--yes,) $(if $(ITER),--iteration $(ITER),)
+
 # ── Release / publish ──────────────────────────────────────────────
 .PHONY: version
 version: ## Print the current version
