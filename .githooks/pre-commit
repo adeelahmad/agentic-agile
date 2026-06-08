@@ -3,6 +3,14 @@
 # Mirrors the cheap half of `make ci`: formatting, JSON manifests, eval suites,
 # and version agreement. Heavier build/test/lint runs in pre-push.
 set -euo pipefail
+
+# Documented bypass (README): SKIP_HOOKS=1 git commit … — e.g. an intentional WIP
+# commit or a known-failing local dependency. Honored before any work runs.
+if [ "${SKIP_HOOKS:-}" = "1" ]; then
+  echo "pre-commit: SKIP_HOOKS=1 — skipping checks"
+  exit 0
+fi
+
 cd "$(git rev-parse --show-toplevel)"
 
 command -v make >/dev/null 2>&1 || { echo "pre-commit: make not found; skipping"; exit 0; }
