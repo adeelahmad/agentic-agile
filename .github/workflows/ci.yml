@@ -1,0 +1,70 @@
+# CI — the checks `make ci` + `make validate` run, mirrored on every push/PR.
+# Documented in README.md ("Continuous integration"). Three independent jobs:
+#   rust       — ctx-symbols + md-db: fmt-check, clippy -D warnings, tests
+#   shellcheck — lints every gate script (errors fail the build)
+#   plugin     — JSON sanity + eval-suite validation + `claude plugin validate --strict`
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: rust (fmt · clippy · test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            plugin/tools/ctx-symbols
+            plugin/tools/md-db
+      - name: fmt --check
+        run: make fmt-check
+      - name: clippy -D warnings
+        run: make clippy
+      - name: test (ctx-symbols + md-db)
+        run: make test
+
+  shellcheck:
+    name: shellcheck (gate scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Lint gate scripts
+        run: make shellcheck
+
+  plugin:
+    name: plugin (json · evals · validate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate plugin.json + marketplace.json
+        run: make json
+      - name: Validate every eval suite's JSON
+        run: make eval-validate
+      - name: Assert versions agree (plugin.json · Cargo.toml · CHANGELOG)
+        run: make version-check
+      - name: Install Claude Code CLI
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash -s stable
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: claude plugin validate --strict
+        run: claude plugin validate ./plugin --strict
