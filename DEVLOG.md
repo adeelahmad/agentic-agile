@@ -48,6 +48,23 @@ Build the `agentic-agile` Claude Code plugin from the DESIGN package.
 
 ---
 
+### Session 4 — 2026-06-08: Marketplace compliance review + publish v0.2.1
+**What:** Audited against the Claude Code marketplace/plugin docs. `claude plugin
+validate` (v2.1.168) passed the plugin clean and the marketplace with one warning
+(no description) — fixed by adding a marketplace `description` and plugin
+`homepage`/`repository`. A live `claude plugin install` smoke test then caught a
+loader bug static validation missed: `plugin.json` declared `"hooks":
+"./hooks/hooks.json"`, but the standard path auto-loads, so it loaded twice →
+`Status: failed to load`. Removed the redundant `manifest.hooks`; reinstalled and
+confirmed `Status: ✔ enabled`. Bumped 0.2.0 → 0.2.1 (0.2.0 shipped broken), replaced
+the v0.2.0 tag with v0.2.1, pushed. Verified install from GitHub end to end.
+**Files:** plugin/.claude-plugin/plugin.json, .claude-plugin/marketplace.json,
+plugin/tools/ctx-symbols/Cargo.toml, CHANGELOG.md.
+**Install:** `claude plugin marketplace add adeelahmad/agentic-agile` then
+`claude plugin install agentic-agile@agentic-agile-marketplace`.
+
+---
+
 ### Session 3 — 2026-06-08: Eval suites for the skill + all 9 agents
 **What:** Added agentskills.io-style evals across the plugin. Expanded the skill suite
 `plugin/skills/agentic-agile/evals/evals.json` from 3 → 7 cases (happy/edge/negative +
