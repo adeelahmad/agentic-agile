@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# pre-commit — fast, deterministic, no network/tokens. Installed by `make hooks`.
+# Mirrors the cheap half of `make ci`: formatting, JSON manifests, eval suites,
+# and version agreement. Heavier build/test/lint runs in pre-push.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+command -v make >/dev/null 2>&1 || { echo "pre-commit: make not found; skipping"; exit 0; }
+
+echo "pre-commit: fmt-check · json · eval-validate · version-check"
+make fmt-check json eval-validate version-check

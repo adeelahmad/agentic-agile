@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# pre-push — the full local gate before publishing. Installed by `make hooks`.
+# Runs everything CI runs (`make ci`): fmt-check, lint (clippy · shellcheck · json),
+# test (ctx-symbols + md-db), and eval-suite validation. shellcheck self-skips with
+# a warning if it is not installed; CI enforces it.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+command -v make >/dev/null 2>&1 || { echo "pre-push: make not found; skipping"; exit 0; }
+
+echo "pre-push: make ci (fmt-check · lint · test · eval-validate)"
+make ci
