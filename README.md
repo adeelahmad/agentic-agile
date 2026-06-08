@@ -36,14 +36,43 @@ block the stop and feed the failure reason back to the supervisor.
 ./plugin/tools/install.sh
 #    ensure ~/.local/bin (or ~/.cargo/bin) is on PATH
 
-# 2) Add this repo as a marketplace and install the plugin
-#    (inside Claude Code)
-/plugin marketplace add /path/to/this/repo
+# 2) Add the marketplace and install the plugin (inside Claude Code)
+/plugin marketplace add adeelahmad/agentic-agile
 /plugin install agentic-agile@agentic-agile-marketplace
+#    (for local dev, point marketplace add at your checkout instead: ./path/to/repo)
 ```
 
-Then run the planning skill interactively in your project; once Stage-2 is complete,
-trigger the autonomous execution run.
+## Using it
+
+The plugin ships one skill — **`agentic-agile`** — which acts as the *supervisor*. You
+don't invoke the 9 sub-agents or the gates directly; the skill dispatches them and
+reacts to gate verdicts. Two ways to start it inside Claude Code:
+
+- **Just ask.** The skill is model-invoked, so it auto-triggers on build / ship /
+  implement / add-a-feature / fix-via-TDD requests — even if you never say "agile":
+
+  ```
+  Build a rate limiter as a sprint with strict TDD.
+  Plan and implement the CSV export feature — tests first, with gates.
+  ```
+
+- **Explicitly**, via the namespaced slash command:
+
+  ```
+  /agentic-agile:agentic-agile
+  ```
+
+Once started:
+
+1. **Planning (you're in the loop):** intake → standards → planner produce the sprint
+   contract + per-story `tasks.md` / `validate.md` / `plan.md`. The skill **stops for
+   your approval** — it will not start building until Stage-2 is approved.
+2. **Execution (autonomous):** after approval it runs RED → SCAFFOLD → GREEN →
+   STRUCTURAL-REVIEW per wave, then a once-per-sprint FINAL-GATE, each enforced by a
+   deterministic hook gate.
+
+The gate backends (`ctx-symbols`, `md-db`) must be on PATH — see step 1 above. Without
+them the gates WARN and fall back to grep (never a false block, never a silent pass).
 
 ## What it does
 

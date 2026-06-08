@@ -40,12 +40,24 @@ they never falsely block and never silently pass a real check. A run with WARNs 
 From a marketplace (this repo ships `.claude-plugin/marketplace.json` at its root):
 
 ```
-/plugin marketplace add /path/to/this/repo
+/plugin marketplace add adeelahmad/agentic-agile
 /plugin install agentic-agile@agentic-agile-marketplace
 ```
 
-Then in a project, run the planning skill interactively; once Stage-2 is complete,
-trigger the autonomous execution run.
+(For local dev, point `marketplace add` at your checkout: `./path/to/repo`.)
+
+## Invoking it
+
+The `agentic-agile` skill is the supervisor — it dispatches the 9 sub-agents and
+gates; you don't call them directly. Start it either way:
+
+- **Implicitly** — it's model-invoked, so asking to build/ship/implement/fix something
+  via a sprint or TDD auto-triggers it (e.g. *"build a rate limiter as a sprint, tests
+  first"*).
+- **Explicitly** — `/agentic-agile:agentic-agile`.
+
+Planning is human-gated: the skill stops for your Stage-2 approval before it begins the
+autonomous RED → SCAFFOLD → GREEN → STRUCTURAL → FINAL execution run.
 
 ## Targeting your repo
 
