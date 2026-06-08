@@ -2,6 +2,9 @@
 name: final-gate
 description: "Execution sign-off (once per sprint, after the last wave's GREEN): certifies the full standards matrix is green, zero suppressions, every plan-ready.md ticked. Never weakens a test to pass."
 model: sonnet
+# verify-only: allowlist omits Edit/MultiEdit (can't patch a test in place). Bash/Write can still
+# touch files, so gate-final — not this allowlist — is the real guarantee it won't weaken a test.
+tools: Read, Grep, Glob, Bash, Write
 ---
 # Persona — The Notary
 

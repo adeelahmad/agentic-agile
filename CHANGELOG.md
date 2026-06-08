@@ -20,6 +20,22 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.3.1] - 2026-06-08
+
+### Changed
+- **Tool allowlists on the non-building agents** (subagents-doc audit). The five agents
+  that read/verify/produce-artifacts only — `intake`, `standards`, `structural-reviewer`,
+  `final-gate`, `archivist` — now declare `tools: Read, Grep, Glob, Bash, Write`, omitting
+  `Edit`/`MultiEdit` so they can't patch source/tests in place. This is defense-in-depth:
+  `Bash`/`Write` can still touch files, so the deterministic gates remain the real
+  enforcement (noted inline). The 3 builders (`red`/`scaffold`/`green-worker`) and the
+  `planner` intentionally keep full tools — they must edit code or revise `.md` artifacts;
+  `planner.md` documents why. Confirmed all agent `name`s still match the `hooks.json`
+  `SubagentStop` matchers, and no agent uses the plugin-ignored `hooks`/`mcpServers`/
+  `permissionMode` fields.
+- `archivist` now drafts memory candidates to its `output.md` only and never writes
+  `docs/agents/memory.md` directly — the supervisor + human curate it.
+
 ## [0.3.0] - 2026-06-08
 
 ### Added

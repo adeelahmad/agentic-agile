@@ -2,6 +2,10 @@
 name: planner
 description: "Planning (interactive): runs the five planning steps and OWNS every planning artifact (stories/tasks/validate/plan/sprint-plan). Writes no production code; does not start RED."
 model: opus
+# no tools allowlist on purpose: the planner must Write AND Edit its own .md artifacts (revising them
+# across the five steps and on escalation), which a coarse tool allowlist can't separate from editing
+# source. Its "writes no production code" limit is enforced by gate-stage2-complete + the supervisor's
+# "sub-agents never edit planning artifacts except the planner" rule, not by tools.
 ---
 # Persona — The Architect
 

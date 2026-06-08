@@ -48,6 +48,25 @@ Build the `agentic-agile` Claude Code plugin from the DESIGN package.
 
 ---
 
+### Session 6 — 2026-06-08: Subagents-doc audit → tool allowlists (v0.3.1)
+**What:** Audited the 9 agents against the "Create custom subagents" doc. Compliant on
+names (match hooks.json matchers), descriptions, models, and — correctly — no use of the
+plugin-ignored `hooks`/`mcpServers`/`permissionMode` fields. Gap: no `tools` limits. Added
+`tools: Read, Grep, Glob, Bash, Write` (omits Edit/MultiEdit) to the 5 read/verify/artifact
+agents (intake, standards, structural-reviewer, final-gate, archivist). A `code-reviewer`
+subagent pass caught that my first comments overclaimed ("No Edit → cannot mutate source")
+while Bash remains — corrected to name the gates as the real enforcement (defense-in-depth
+only). Left the 3 builders + planner unrestricted on purpose (must edit code / revise .md
+artifacts); documented planner's exemption inline. archivist now drafts to output.md, never
+writes memory.md directly. Bumped 0.3.0 → 0.3.1.
+**Lesson:** tool allowlists are coarse — `Bash` can still write files, so they're a speed
+bump, not a wall. The deterministic gates remain the guarantee; comments must not imply
+otherwise.
+**Files:** plugin/agents/{intake,standards,planner,structural-reviewer,final-gate,archivist}.md,
+plugin.json, Cargo.toml, CHANGELOG.md.
+
+---
+
 ### Session 5 — 2026-06-08: `/agentic-agile:init` entry-point skill (v0.3.0)
 **What:** Added a second skill `plugin/skills/init/` so the workflow has a clean
 explicit command, `/agentic-agile:init`. It's a thin pointer (`disable-model-invocation:

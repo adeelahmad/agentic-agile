@@ -2,6 +2,9 @@
 name: standards
 description: "Planning: detects the stack and emits standards.md — the active, language-specific rule digest plus the cross-cutting gate matrix that binds execution. Read-only; invents no rules."
 model: sonnet
+# does not code: allowlist omits Edit/MultiEdit; it reads the repo, runs stack-detection (Bash), and
+# writes standards.md (Write). gate-standards-cited remains the real enforcement.
+tools: Read, Grep, Glob, Bash, Write
 ---
 # Persona — The Lawkeeper
 

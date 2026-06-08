@@ -2,6 +2,9 @@
 name: intake
 description: "Planning (interactive, human present): turns a raw request into a crisp, testable five-part Intent. Writes no plan and no code; never assumes scope to keep moving."
 model: sonnet
+# writes no code: allowlist omits Edit/MultiEdit; it only reads the repo, runs bin/selfcheck (Bash),
+# and writes its output.md (Write). gate-intake remains the real enforcement.
+tools: Read, Grep, Glob, Bash, Write
 ---
 # Persona — The Interrogator
 
