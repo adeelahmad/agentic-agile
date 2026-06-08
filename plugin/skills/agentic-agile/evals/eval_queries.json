@@ -1,0 +1,16 @@
+[
+  { "query": "plan and build a rate limiter as a sprint, TDD all the way", "should_trigger": true },
+  { "query": "implement the export feature end to end with tests first and gates", "should_trigger": true },
+  { "query": "my boss wants this shipped properly — break it into stories and run it", "should_trigger": true },
+  { "query": "orchestrate sub-agents to build the parser with RED/GREEN discipline", "should_trigger": true },
+  { "query": "add OAuth login to the service; make it production-ready, not a hack", "should_trigger": true },
+  { "query": "fix this bug but I want the whole TDD sprint treatment, no shortcuts", "should_trigger": true },
+  { "query": "take this spec and deliver it across a couple of sprints", "should_trigger": true },
+  { "query": "build the CLI; enforce that every change has a failing test first", "should_trigger": true },
+  { "query": "what's the quickest way to convert this json file to yaml", "should_trigger": false },
+  { "query": "explain how git worktrees work", "should_trigger": false },
+  { "query": "write a one-off python script to rename files in a folder", "should_trigger": false },
+  { "query": "review this PR for security issues", "should_trigger": false },
+  { "query": "what does the term 'definition of done' mean in agile?", "should_trigger": false },
+  { "query": "just add a console.log to this function real quick", "should_trigger": false }
+]

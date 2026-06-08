@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# SCAFFOLD gate: every referenced symbol defined EXACTLY ONCE (ctx-symbols count==1),
+# every new body is panic+TODO (OPEN-1 guard: a real body where a stub belongs =>
+# reject), no mod-common shim remains, no clobber. (Target: Rust.)
+GATE_NAME="gate-scaffold-verify"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+: "${CLAUDE_PLUGIN_ROOT:=$(cd "$HERE/.." && pwd)}"
+# shellcheck source=/dev/null
+source "$HERE/_gatelib.sh"
+
+root="$(repo_dir)"
+have_ctx_symbols || warn "ctx-symbols absent; using grep fallback for uniqueness (fragile)"
+
+# 1) Resolve the symbol set: $SCAFFOLD_SYMBOLS, else parse `path::Sym` backticks
+#    from this story's plan-ready.md (the test call-sites name the prod symbols).
+# Symbol set = the PRODUCTION symbols the scaffolder stubbed. Source order:
+#   1) SCAFFOLD_SYMBOLS env (from .agentic/task.env)
+#   2) .agentic/scaffold-symbols (scaffolder-written, one symbol per line)
+# NOTE: plan-ready.md lists TEST paths (path::test_fn), NOT production symbols, so it is
+# NOT a valid source for this check (v0.2 fix).
+symbols="${SCAFFOLD_SYMBOLS:-}"
+if [ -z "$symbols" ]; then
+  sf="$root/.agentic/scaffold-symbols"
+  if [ -f "$sf" ]; then
+    symbols="$(grep -vE '^[[:space:]]*(#|$)' "$sf" | tr -s ' \t' '\n' | sort -u)"
+  fi
+fi
+[ -z "$symbols" ] && warn "no scaffold symbols resolved (set SCAFFOLD_SYMBOLS or write .agentic/scaffold-symbols); uniqueness check skipped"
+
+# 2) Each symbol defined exactly once across the tree.
+for sym in $symbols; do
+  n="$(symbol_count "$sym" "$root")"
+  [ "$n" = "1" ] || fail "symbol \`$sym\` defined $n times (must be exactly 1 — duplicate/parallel definition)"
+done
+
+# 3) No MARKED shim remains. RED shims carry `// agentic:shim`; a normal
+#    tests/common/mod.rs helper has no marker and is left untouched (v0.2 fix).
+if grep -rlE '//[[:space:]]*agentic:shim' --include='*.rs' "$root" 2>/dev/null | grep -v '/target/' >/dev/null; then
+  fail "a marked RED shim (// agentic:shim) still present after scaffold (must be deleted)"
+fi
+
+# 4) OPEN-1 guard: every scaffolded symbol's file must carry a SUB-AGENT-TODO panic
+#    (a real implementation in place of a stub => reject).
+for sym in $symbols; do
+  if have_ctx_symbols; then
+    file="$(ctx-symbols locate "$sym" --tree "$root" | head -1 | cut -d: -f1)"
+  else
+    file="$(grep -rlE "\\b(fn|struct|enum|impl)\\b.*$sym" --include='*.rs' "$root" 2>/dev/null | grep -v '/target/' | head -1)"
+  fi
+  [ -z "$file" ] && fail "scaffolded symbol \`$sym\` not found on disk"
+  grep -q 'SUB-AGENT-TODO' "$file" \
+    || fail "\`$sym\` in $file has no SUB-AGENT-TODO panic — scaffolder implemented a body (forbidden)"
+done
+
+note "scaffold verified: ${symbols:+$(echo "$symbols" | wc -w | tr -d ' ') symbol(s) unique + stubbed}, no shims"
+exit 0

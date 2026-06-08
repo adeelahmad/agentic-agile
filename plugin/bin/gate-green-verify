@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# GREEN gate: this task's tests pass, no regression, diff within tasks.md scope,
+# the standards.md matrix is green, zero suppressions, output.md validates.
+# (Target: Rust. The matrix is the one DECLARED IN standards.md — not hardcoded.)
+GATE_NAME="gate-green-verify"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+: "${CLAUDE_PLUGIN_ROOT:=$(cd "$HERE/.." && pwd)}"
+# shellcheck source=/dev/null
+source "$HERE/_gatelib.sh"
+
+# 1) output.md / init.md structure.
+validate_agent_io
+
+# 2) No suppression anywhere (RED is cleared by GREEN, never by skipping).
+assert_no_suppression
+
+# 3) Diff scope: only files this task may touch (tasks.md scope) + its RED test file.
+if [ -n "${SCOPE_GLOBS:-}" ]; then
+  : "${TEST_GLOBS:=*/tests/*.rs tests/*.rs}"
+  allow="$SCOPE_GLOBS $TEST_GLOBS"
+  while IFS= read -r p; do
+    [ -z "$p" ] && continue
+    path_matches_any "$p" "$allow" \
+      || fail "GREEN diff touches out-of-scope path: $p (allowed: $allow)"
+  done < <(changed_paths)
+else
+  warn "SCOPE_GLOBS unset; tasks.md diff-scope check skipped (set it to enforce R2)"
+fi
+
+# 4) The standards.md gate matrix (fmt/lint/test/coverage/...) must be green.
+#    This also asserts the task's tests now pass and nothing regressed.
+run_standards_matrix
+
+note "GREEN verified: matrix green, in scope, no suppression"
+exit 0

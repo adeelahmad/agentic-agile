@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# plan.md body shape: one bullet = one test, each with a real path + fn name.
+set -euo pipefail
+f="${1:?plan.md}"
+# every checkbox line must contain `path::fn` in backticks
+if grep -nE '^\s*- \[[ x]\]' "$f" | grep -vqE '`[^`]+::[A-Za-z_][A-Za-z0-9_]*`'; then
+  echo "plan.md bullet missing path::fn" >&2; exit 2; fi
+exit 0

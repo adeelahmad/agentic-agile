@@ -1,0 +1,21 @@
+// memory.kdl — the cross-sprint learning store (docs/agents/memory.md).
+// Curated at every planning retrospective; entries are injected (role-scoped) into
+// each sub-agent's init.md "# Memory" section.
+// Validate: md-db validate <dir> --schema schemas/memory.kdl
+
+type "memory" {
+    field "type"              type="string" required=#true               // "memory"
+    field "updated_at"        type="string" required=#true pattern="^\\d{4}-\\d{2}-\\d{2}T"
+    field "last_retro_sprint" type="number"                              // cadence marker
+
+    section "Entries" required=#true {
+        table {
+            column "id"         type="string" required=#true             // M-001
+            column "applies_to" type="string" required=#true             // all | red-worker | green-worker | ...
+            column "text"       type="string" required=#true             // 1-2 lines, terse guidance
+            column "origin"     type="string"                            // sprints/tasks it came from
+            column "recurrence" type="string"                            // times observed (>=2 for auto)
+            column "added"      type="string"                            // ISO date
+        }
+    }
+}

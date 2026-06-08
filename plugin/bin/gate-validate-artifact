@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# PostToolUse(Write): route a just-written .md to its KDL schema and validate via
+# md-db. If md-db is absent, WARN and fall back to a frontmatter check — never a
+# false block, never a silent pass of a real check.
+set -uo pipefail
+
+# Resolve the written file path: arg, env, or the PostToolUse stdin JSON.
+f="${1:-${TOOL_FILE_PATH:-}}"
+if [ -z "$f" ] && [ ! -t 0 ]; then
+  json="$(cat)"
+  f="$(printf '%s' "$json" | sed -nE 's/.*"file_path"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -1)"
+fi
+[ -z "$f" ] && exit 0
+
+case "$(basename "$f")" in
+  init.md|output.md) schema=agent-io.kdl ;;
+  stories.md|tasks.md|validate.md|plan.md|plan-ready.md) schema=planning-artifacts.kdl ;;
+  *) exit 0 ;;
+esac
+
+if command -v md-db >/dev/null 2>&1; then
+  md-db validate "$(dirname "$f")" --schema "${CLAUDE_PLUGIN_ROOT}/schemas/$schema" \
+    || { echo "BLOCK[gate-validate-artifact]: $f failed $schema" >&2; exit 2; }
+else
+  echo "WARN[gate-validate-artifact]: md-db absent; frontmatter-only fallback for $f" >&2
+  [ -f "$f" ] || exit 0
+  # Fallback: artifact must open with YAML frontmatter carrying a type: field.
+  head -1 "$f" | grep -q '^---' \
+    || { echo "BLOCK[gate-validate-artifact]: $f missing YAML frontmatter" >&2; exit 2; }
+  # `type:` must be INSIDE the frontmatter block (between the first two --- lines).
+  awk 'NR==1&&/^---/{f=1;next} f&&/^---/{exit} f' "$f" | grep -qE '^type:[[:space:]]*[A-Za-z-]+' \
+    || { echo "BLOCK[gate-validate-artifact]: $f frontmatter missing type:" >&2; exit 2; }
+fi

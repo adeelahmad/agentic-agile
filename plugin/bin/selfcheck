@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# selfcheck — run THIS activity's gate as a pre-flight check, BEFORE you report done.
+# It runs the exact script the SubagentStop hook will run, so a PASS here means the
+# hook will pass too. Run it, read the reason, fix, re-run until PASS.
+#   selfcheck [role]       role defaults to $AGENT_ROLE (from .agentic/task.env)
+#   selfcheck --help
+# EXIT: 0 = PASS (safe to report done) · 2 = FAIL (fix and re-run) · 64 = unknown role
+set -uo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
+top="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+[ -f "$top/.agentic/task.env" ] && { set -a; . "$top/.agentic/task.env"; set +a; }
+
+case "${1:-}" in
+  -h|--help|help)
+    sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+
+role="${1:-${AGENT_ROLE:-}}"
+case "$role" in
+  red-worker)          gate=gate-red-verify ;;
+  scaffolder)          gate=gate-scaffold-verify ;;
+  green-worker)        gate=gate-green-verify ;;
+  structural-reviewer) gate=gate-structural-integrity ;;
+  final-gate)          gate=gate-final ;;
+  standards)           gate=gate-standards-cited ;;
+  planner)             gate=gate-stage2-complete ;;
+  intake)              gate=gate-intake ;;
+  archivist)           gate=gate-memory ;;
+  *) echo "selfcheck: unknown role '${role:-<empty>}' (set AGENT_ROLE or pass a role)" >&2; exit 64 ;;
+esac
+
+echo "self-check: running $gate ..."
+if "$HERE/$gate"; then
+  echo "SELF-CHECK PASS — $gate is green; safe to report done."
+  exit 0
+else
+  rc=$?
+  echo "SELF-CHECK FAIL ($gate, exit $rc) — fix the issues above and re-run before reporting done." >&2
+  exit "$rc"
+fi

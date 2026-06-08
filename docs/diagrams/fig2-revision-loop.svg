@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100%" viewBox="0 0 680 270" role="img"><style>
+text.t{fill:#1a2433;font:14px sans-serif}
+text.ts{fill:#55606f;font:12px sans-serif}
+text.th{fill:#1a2433;font:500 14px sans-serif}
+.box{fill:#fffdf8;stroke:rgba(26,36,51,.18)}
+.arr{stroke:#1a2433;stroke-width:1.5;fill:none}
+.leader{stroke:#8b94a1;stroke-width:.6;stroke-dasharray:3 3;fill:none}
+.c-teal rect,rect.c-teal{fill:#e1f5ee;stroke:#0f6e56}.c-teal text{fill:#085041}
+.c-gray rect,rect.c-gray{fill:#f1efe8;stroke:#5f5e5a}.c-gray text{fill:#2c2c2a}
+.c-blue rect,rect.c-blue{fill:#e6f1fb;stroke:#185fa5}.c-blue text{fill:#0c447c}
+.c-coral rect,rect.c-coral{fill:#faece7;stroke:#993c1d}.c-coral text{fill:#712b13}
+.c-amber rect,rect.c-amber{fill:#faeeda;stroke:#854f0b}.c-amber text{fill:#633806}
+</style><title>Per-task revision loop with init.md and output.md</title><desc>The supervisor writes init.md. A sub-agent reads it and writes output.md. The supervisor verifies against validate.md. On pass it ticks plan-ready.md; on fail it appends a feedback entry to init.md and re-spawns. After a bounded number of attempts the supervisor escalates to the next planning session.</desc>
+  <defs><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <g class="c-amber"><rect x="420" y="14" width="210" height="34" rx="8" stroke-width="0.5"/>
+  <text class="ts" x="525" y="31" text-anchor="middle" dominant-baseline="central">pass → tick plan-ready.md, next</text></g>
+  <line x1="565" y1="60" x2="565" y2="49" class="arr" marker-end="url(#ar2)"/>
+  <text class="ts" x="575" y="56" dominant-baseline="central">pass</text>
+  <g class="c-teal"><rect x="50" y="60" width="130" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="115" y="84" text-anchor="middle" dominant-baseline="central">init.md</text>
+  <text class="ts" x="115" y="104" text-anchor="middle" dominant-baseline="central">context + feedback</text></g>
+  <g class="c-gray"><rect x="200" y="60" width="130" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="265" y="84" text-anchor="middle" dominant-baseline="central">sub-agent</text>
+  <text class="ts" x="265" y="104" text-anchor="middle" dominant-baseline="central">RED or GREEN</text></g>
+  <g class="c-coral"><rect x="350" y="60" width="130" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="415" y="84" text-anchor="middle" dominant-baseline="central">output.md</text>
+  <text class="ts" x="415" y="104" text-anchor="middle" dominant-baseline="central">the agent's report</text></g>
+  <g class="c-amber"><rect x="500" y="60" width="130" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="565" y="84" text-anchor="middle" dominant-baseline="central">verify</text>
+  <text class="ts" x="565" y="104" text-anchor="middle" dominant-baseline="central">vs validate.md</text></g>
+  <line x1="180" y1="92" x2="198" y2="92" class="arr" marker-end="url(#ar2)"/>
+  <line x1="330" y1="92" x2="348" y2="92" class="arr" marker-end="url(#ar2)"/>
+  <line x1="480" y1="92" x2="498" y2="92" class="arr" marker-end="url(#ar2)"/>
+  <path d="M565 124 L565 158 L115 158 L115 125" fill="none" stroke="#993c1d" stroke-width="1" marker-end="url(#ar2)"/>
+  <text class="ts" x="340" y="173" text-anchor="middle" dominant-baseline="central">fail → append feedback to init.md, re-spawn</text>
+  <rect class="box" x="40" y="192" width="600" height="32" rx="8" stroke-width="0.5"/>
+  <text class="ts" x="340" y="208" text-anchor="middle" dominant-baseline="central">after max attempts the supervisor escalates to the next planning session (§6)</text>
+  <rect class="c-teal" x="130" y="242" width="10" height="10" rx="2"/>
+  <text class="ts" x="146" y="247" dominant-baseline="central">supervisor context</text>
+  <rect class="c-coral" x="310" y="242" width="10" height="10" rx="2"/>
+  <text class="ts" x="326" y="247" dominant-baseline="central">sub-agent output</text>
+  <rect class="c-amber" x="480" y="242" width="10" height="10" rx="2"/>
+  <text class="ts" x="496" y="247" dominant-baseline="central">decision</text>
+  </svg>

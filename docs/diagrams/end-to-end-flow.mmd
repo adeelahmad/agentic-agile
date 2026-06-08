@@ -1,0 +1,91 @@
+flowchart TD
+  REQ(["User request / outcome"])
+
+  subgraph PLAN["PLANNING - human present (every session opens with a retrospective)"]
+    direction TB
+    RETRO["retrospective (the archivist)<br/>distills recurring failures + reliably-good patterns"]
+    INTAKE["intake<br/>five-part Intent"]
+    STD["standards<br/>rule digest + gate matrix"]
+    PLN["planner<br/>stories, tasks, validate, plan"]
+    G2{"Stage-2 complete?<br/>self-check, no TBW"}
+    RETRO --> INTAKE
+    INTAKE --> STD
+    STD --> PLN
+    PLN --> G2
+    G2 -->|"no: RE-PLAN (human-bounded)"| PLN
+  end
+
+  REQ -->|"new planning session"| RETRO
+  HUMAN(["human insight"]) -.->|"continuous-failure guidance"| RETRO
+
+  MEM[("memory.md<br/>terse, role-scoped, recurrence-gated")]
+  RETRO -->|"writes / curates"| MEM
+
+  SUPER["SUPERVISOR<br/>orchestrates execution, reads the GLOBAL lineage"]
+  G2 -->|"approved plan"| SUPER
+
+  subgraph EXEC["EXECUTION - autonomous, hook-enforced, per wave (one worktree per task)"]
+    direction TB
+    INIT["attempt-K / init.md<br/>contract + Memory + feedback"]
+    RED["RED<br/>tests vs shims (fail by assertion)"]
+    GRED{"gate-red-verify"}
+    SCAF["scaffold<br/>idempotent, panic+TODO"]
+    GSCAF{"gate-scaffold-verify"}
+    GREEN["GREEN<br/>minimal to pass"]
+    GGREEN{"gate-green-verify<br/>standards matrix"}
+    SREV["structural-reviewer"]
+    GSREV{"gate-structural-integrity"}
+    WAVE{"more waves?<br/>AND net progress?"}
+    INIT --> RED
+    RED --> GRED
+    GRED -->|pass| SCAF
+    SCAF --> GSCAF
+    GSCAF -->|pass| GREEN
+    GREEN --> GGREEN
+    GGREEN -->|"pass: tick + merge"| SREV
+    SREV --> GSREV
+    GSREV -->|clean| WAVE
+    GSREV -->|"isolated + fixable: re-spawn GREEN"| GREEN
+  end
+
+  SUPER -->|dispatch| INIT
+  MEM -.->|"injected into init.md Memory"| INIT
+  GRED -->|"fail: feedback"| INIT
+  GSCAF -->|"reject: feedback"| INIT
+  GGREEN -->|"fail: feedback"| INIT
+
+  LIN[("lineage.jsonl (global)<br/>+ per-task transcripts")]
+  EXEC -.->|"record every call (PostToolUse); stage-out on stop"| LIN
+  LIN -.->|"stage-in: read-only task transcript into worktree"| INIT
+  LIN -.->|"global view"| SUPER
+  LIN -.->|"read to distill memory"| RETRO
+
+  FG["final-gate<br/>matrix + zero suppressions + all ticked"]
+  GFG{"gate-final"}
+  WAVE -->|"no: last wave"| FG
+  FG --> GFG
+  GFG -->|pass| DONE(["Sprint merged / done"])
+  GFG -->|"fixable: re-dispatch"| SUPER
+  WAVE -->|"yes: next wave"| SUPER
+
+  ESC["ESCALATION (cause-specific):<br/>foundation-poisoning = HALT chain; scope/plan = human; budget/no-progress = stop"]
+  GSREV -->|"foundation-poisoning: HALT chain"| ESC
+  GFG -->|"scope / plan defect"| ESC
+  WAVE -->|"no progress: stall"| ESC
+  INIT -->|"budget exhausted (per task, max 3)"| ESC
+  ESC -.->|"re-enter at planner, context preserved"| PLN
+
+  classDef human fill:#e1f5ee,stroke:#0f6e56,color:#084a37;
+  classDef sup fill:#e9e3f7,stroke:#5b3fa0,color:#3a2769;
+  classDef auto fill:#eef2f7,stroke:#48586a,color:#16202e;
+  classDef gate fill:#faeeda,stroke:#8a520c,color:#553208;
+  classDef term fill:#11203a,stroke:#11203a,color:#ffffff;
+  classDef esc fill:#faece7,stroke:#9a3d1e,color:#5a2412;
+  classDef store fill:#e4eef0,stroke:#2f6f7a,color:#12333a;
+  class RETRO,INTAKE,STD,PLN,HUMAN human;
+  class G2,GRED,GSCAF,GGREEN,GSREV,WAVE,GFG gate;
+  class SUPER sup;
+  class INIT,RED,SCAF,GREEN,SREV,FG auto;
+  class REQ,DONE term;
+  class ESC esc;
+  class MEM,LIN store;

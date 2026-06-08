@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# memory gate: the retrospective's memory.md must validate, and NO entry may relax an
+# invariant (tell agents to skip/suppress/ignore/bypass a test or gate). Memories are
+# advisory guidance only. Run before committing memory; SubagentStop(archivist) backstop.
+# NOTE: the guardrail grep is deliberately conservative — an entry that even mentions
+# "skip the test" is blocked; rephrase as a fix, not an evasion. (False-positive-safe:
+# the human rewords; that is cheaper than a memory that quietly licenses suppression.)
+set -uo pipefail
+GATE_NAME="gate-memory"
+
+f="${1:-${MEMORY_FILE:-}}"
+if [ -z "$f" ]; then
+  f="$(find . -maxdepth 6 -path '*docs/agents/memory.md' 2>/dev/null | head -1)"
+  [ -z "$f" ] && f="$(find . -maxdepth 6 -name memory.md 2>/dev/null | head -1)"
+fi
+if [ -z "$f" ] || [ ! -f "$f" ]; then
+  echo "WARN[$GATE_NAME]: no memory.md found; memory check skipped (none yet)" >&2
+  exit 0
+fi
+
+if command -v md-db >/dev/null 2>&1 && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/schemas/memory.kdl" ]; then
+  md-db validate "$(dirname "$f")" --schema "${CLAUDE_PLUGIN_ROOT}/schemas/memory.kdl" \
+    || { echo "BLOCK[$GATE_NAME]: $f failed memory.kdl" >&2; exit 2; }
+fi
+
+relax='skip[[:space:]]+(the[[:space:]]+)?test|suppress|#\[ignore\]|\.skip\(|ignore[[:space:]]+(the[[:space:]]+)?test|disable[[:space:]]+(the[[:space:]]+)?(test|gate)|bypass[[:space:]]+(the[[:space:]]+)?gate|relax[[:space:]]+(the[[:space:]]+)?(gate|invariant)'
+if grep -niE "$relax" "$f" >/dev/null 2>&1; then
+  echo "BLOCK[$GATE_NAME]: a memory entry tells agents to weaken a gate (skip/suppress/ignore/bypass):" >&2
+  grep -niE "$relax" "$f" >&2
+  echo "  rephrase as a fix (e.g. 'fix the flakiness'), never an evasion." >&2
+  exit 2
+fi
+echo "[$GATE_NAME] memory.md valid and contains no invariant-relaxing entry" >&2
+exit 0

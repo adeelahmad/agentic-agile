@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# PLANNING -> EXECUTION boundary (OPEN-3: run by the supervisor as a self-check
+# before the first dispatch). Stage-2 must be complete for EVERY story, no TBW.
+# md-db absent => WARN + structural fallback, never a false block / silent pass.
+set -uo pipefail
+GATE_NAME="gate-stage2-complete"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+: "${CLAUDE_PLUGIN_ROOT:=$(cd "$HERE/.." && pwd)}"
+
+sprint_dir="${1:-${SPRINT_DIR:-}}"
+if [ -z "$sprint_dir" ]; then
+  sprint_dir="$(find . -maxdepth 5 -type d -name 'sprint*' 2>/dev/null | sort | tail -1)"
+fi
+if [ -z "$sprint_dir" ] || [ ! -d "$sprint_dir" ]; then
+  echo "WARN[$GATE_NAME]: no sprint dir found; stage-2 check skipped (weaker)" >&2; exit 0
+fi
+
+# 1) No TBW placeholders anywhere.
+if grep -rl 'TBW' "$sprint_dir" >/dev/null 2>&1; then
+  echo "BLOCK[$GATE_NAME]: TBW remains in $sprint_dir (partial Stage-2 forbidden)" >&2
+  exit 2
+fi
+
+# 2) Every SN-NN story in stories.md has a dir with tasks.md + validate.md + plan.md.
+stories="$sprint_dir/stories.md"
+if [ -f "$stories" ]; then
+  ids="$(grep -oE 'S[0-9]+-[0-9]+' "$stories" | sort -u)"
+  for id in $ids; do
+    # match dir like s1-01-<slug> for S1-01
+    lc="$(echo "$id" | tr 'A-Z' 'a-z')"          # s1-01
+    dir="$(find "$sprint_dir" -maxdepth 1 -type d -name "${lc}-*" | head -1)"
+    [ -n "$dir" ] || { echo "BLOCK[$GATE_NAME]: no story dir for $id" >&2; exit 2; }
+    for f in tasks.md validate.md plan.md; do
+      [ -f "$dir/$f" ] || { echo "BLOCK[$GATE_NAME]: $id missing $f" >&2; exit 2; }
+    done
+  done
+else
+  echo "WARN[$GATE_NAME]: stories.md not found in $sprint_dir" >&2
+fi
+
+# 3) Structural validation via md-db (fallback to frontmatter check).
+if command -v md-db >/dev/null 2>&1; then
+  md-db validate "$sprint_dir" --schema "${CLAUDE_PLUGIN_ROOT}/schemas/planning-artifacts.kdl" \
+    || { echo "BLOCK[$GATE_NAME]: md-db rejected $sprint_dir" >&2; exit 2; }
+else
+  echo "WARN[$GATE_NAME]: md-db absent; structural validation limited to dir/frontmatter checks" >&2
+fi
+
+echo "[$GATE_NAME] Stage-2 complete for all stories in $sprint_dir" >&2
+exit 0

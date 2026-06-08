@@ -1,0 +1,517 @@
+<!-- agentic-agile plugin — complete design document -->
+<meta charset="utf-8">
+<title>agentic-agile · plugin design</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  --ink:#1a2433; --ink-soft:#55606f; --ink-faint:#8b94a1;
+  --paper:#f6f3ec; --card:#fffdf8; --rule:#e2dccf; --rule-soft:#ece7da;
+  --teal:#0f6e56; --teal-soft:#e1f5ee; --teal-deep:#085041;
+  --coral:#993c1d; --coral-soft:#faece7;
+  --amber:#854f0b; --amber-soft:#faeeda;
+  --blue:#185fa5; --blue-soft:#e6f1fb;
+  /* SVG shim vars */
+  --color-text-primary:#1a2433; --color-text-secondary:#55606f; --color-text-tertiary:#8b94a1;
+  --color-background-secondary:#fffdf8; --color-border-tertiary:rgba(26,36,51,.16); --t:#55606f;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:'IBM Plex Sans',sans-serif; font-size:16.5px; line-height:1.72;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:900px; margin:0 auto; padding:0 28px 120px}
+
+/* ---- masthead ---- */
+header.mast{padding:64px 0 40px; border-bottom:1px solid var(--rule)}
+.kicker{font:500 12.5px/1 'JetBrains Mono',monospace; letter-spacing:.18em; text-transform:uppercase; color:var(--teal)}
+h1.title{font-family:'Fraunces',serif; font-weight:600; font-size:clamp(38px,6vw,62px); line-height:1.02; margin:18px 0 10px; letter-spacing:-.015em}
+.subtitle{font-size:19px; color:var(--ink-soft); max-width:620px; margin:0}
+.meta{margin-top:26px; display:flex; flex-wrap:wrap; gap:8px 26px; font:500 12.5px/1 'JetBrains Mono',monospace; color:var(--ink-faint)}
+.meta b{color:var(--ink); font-weight:500}
+
+/* ---- toc ---- */
+nav.toc{margin:36px 0 8px; padding:22px 26px; background:var(--card); border:1px solid var(--rule); border-radius:14px}
+nav.toc h4{margin:0 0 12px; font:600 12px/1 'JetBrains Mono',monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint)}
+nav.toc ol{margin:0; padding:0; list-style:none; columns:2; column-gap:38px}
+nav.toc li{margin:0 0 7px; font-size:14.5px; break-inside:avoid}
+nav.toc a{color:var(--ink); text-decoration:none; border-bottom:1px solid transparent}
+nav.toc a:hover{border-bottom-color:var(--teal); color:var(--teal)}
+nav.toc .n{font:500 12px 'JetBrains Mono',monospace; color:var(--teal); margin-right:9px}
+
+/* ---- sections ---- */
+section{padding-top:52px}
+h2{font-family:'Fraunces',serif; font-weight:600; font-size:30px; letter-spacing:-.01em; margin:0 0 6px; padding-top:6px}
+h2 .num{font:500 15px 'JetBrains Mono',monospace; color:var(--teal); vertical-align:6px; margin-right:14px}
+h3{font-family:'IBM Plex Sans'; font-weight:600; font-size:17px; margin:30px 0 6px; color:var(--ink)}
+.lede{font-size:18px; color:var(--ink-soft); margin:4px 0 18px}
+p{margin:0 0 16px}
+strong{font-weight:600}
+code{font-family:'JetBrains Mono',monospace; font-size:.86em; background:#ece7da; color:#3a4554; padding:.12em .42em; border-radius:5px}
+a.x{color:var(--teal); text-decoration:none; border-bottom:1px solid rgba(15,110,86,.35)}
+
+/* figure */
+figure{margin:30px 0; padding:22px; background:var(--card); border:1px solid var(--rule); border-radius:16px}
+figure svg{display:block; width:100%; height:auto}
+figcaption{margin-top:14px; font-size:13.5px; color:var(--ink-faint); text-align:center; font-style:italic; font-family:'Fraunces',serif}
+
+/* tables */
+table{width:100%; border-collapse:collapse; margin:18px 0; font-size:14.5px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{font:600 11.5px/1.3 'JetBrains Mono',monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); border-bottom:1.5px solid var(--rule)}
+tbody tr:hover{background:rgba(15,110,86,.04)}
+td code{font-size:.82em}
+
+/* pre / tree */
+pre{margin:18px 0; padding:20px 22px; background:#11203a; color:#cdd7e4; border-radius:14px; overflow:auto; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.62}
+pre .c{color:#7f8ba0}
+pre .k{color:#7fd4b4}
+
+/* callouts */
+.note{margin:18px 0; padding:16px 20px; border-radius:12px; border-left:3px solid var(--teal); background:var(--teal-soft); border-radius:0 12px 12px 0}
+.note.warn{border-left-color:var(--coral); background:var(--coral-soft)}
+.note p{margin:0}
+.note .lab{font:600 11px/1 'JetBrains Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--teal); display:block; margin-bottom:6px}
+.note.warn .lab{color:var(--coral)}
+
+/* open items */
+.open{margin:14px 0; padding:15px 18px 15px 18px; background:var(--card); border:1px solid var(--rule); border-radius:12px}
+.open .tag{display:inline-block; font:600 11px/1 'JetBrains Mono',monospace; letter-spacing:.1em; color:#fff; background:var(--amber); padding:4px 8px; border-radius:6px; margin-right:10px}
+.open.done .tag{background:var(--teal)}
+.open p{margin:0; display:inline}
+
+/* svg shim — makes the embedded diagram classes render standalone */
+svg text.t{fill:var(--color-text-primary); font:14px 'IBM Plex Sans',sans-serif}
+svg text.ts{fill:var(--color-text-secondary); font:12px 'IBM Plex Sans',sans-serif}
+svg text.th{fill:var(--color-text-primary); font:500 14px 'IBM Plex Sans',sans-serif}
+svg .box{fill:#fffdf8; stroke:rgba(26,36,51,.18)}
+svg .arr{stroke:var(--color-text-primary); stroke-width:1.5; fill:none}
+svg .leader{stroke:var(--color-text-tertiary); stroke-width:.6; stroke-dasharray:3 3; fill:none}
+svg .c-teal rect, svg rect.c-teal, svg .c-teal circle{fill:#e1f5ee; stroke:#0f6e56}
+svg .c-teal text{fill:#085041 !important}
+svg .c-gray rect, svg rect.c-gray{fill:#f1efe8; stroke:#5f5e5a}
+svg .c-gray text{fill:#2c2c2a !important}
+svg .c-blue rect, svg rect.c-blue{fill:#e6f1fb; stroke:#185fa5}
+svg .c-blue text{fill:#0c447c !important}
+svg .c-coral rect, svg rect.c-coral{fill:#faece7; stroke:#993c1d}
+svg .c-coral text{fill:#712b13 !important}
+svg .c-amber rect, svg rect.c-amber{fill:#faeeda; stroke:#854f0b}
+svg .c-amber text{fill:#633806 !important}
+
+footer{margin-top:70px; padding-top:24px; border-top:1px solid var(--rule); font-size:13.5px; color:var(--ink-faint)}
+@media(max-width:620px){ nav.toc ol{columns:1} .wrap{padding:0 18px 80px} }
+</style>
+
+<div class="wrap">
+<header class="mast">
+  <div class="kicker">Plugin Design · Consolidated</div>
+  <h1 class="title">agentic-agile</h1>
+  <p class="subtitle">Two-stage agile planning and two-phase TDD execution, packaged as one installable Claude Code plugin with md-db / KDL artifact validation and deterministic hook gates.</p>
+  <div class="meta">
+    <span><b>Status</b> design — pre-build</span>
+    <span><b>Artifacts</b> DESIGN.md · pipeline tree · 3 schemas</span>
+    <span><b>Open forks</b> 6 (see §11)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h4>Contents</h4>
+  <ol>
+    <li><span class="n">01</span><a href="#boundaries">The two boundaries</a></li>
+    <li><span class="n">02</span><a href="#lifecycle">Lifecycle</a></li>
+    <li><span class="n">03</span><a href="#personas">The eight personas</a></li>
+    <li><span class="n">04</span><a href="#ownership">Artifact ownership</a></li>
+    <li><span class="n">05</span><a href="#revision">The revision loop</a></li>
+    <li><span class="n">06</span><a href="#judgment">Supervisor judgment</a></li>
+    <li><span class="n">07</span><a href="#validation">Validation model</a></li>
+    <li><span class="n">08</span><a href="#backend">Symbol-resolution backend</a></li>
+    <li><span class="n">09</span><a href="#primitives">Platform-primitive mapping</a></li>
+    <li><span class="n">10</span><a href="#layout">Plugin layout</a></li>
+    <li><span class="n">11</span><a href="#open">Open questions</a></li>
+  </ol>
+</nav>
+
+<section id="boundaries">
+  <h2><span class="num">01</span>The two boundaries</h2>
+  <p class="lede">Every decision in this design hangs off two lines.</p>
+  <p><strong>The human boundary.</strong> Humans interact only during planning. Execution is autonomous. This resolves the platform's "no mid-run user input" limit cleanly — steering was never needed mid-run, because planning is the checkpoint and execution is hands-off.</p>
+  <p><strong>The phase boundary.</strong> Planning is interactive and human-gated; execution is autonomous and hook-enforced. The hooks are the substitute for the human attention deliberately absent during execution — a skill is advisory, a hook fires regardless of the model, so the determinism the design needs only exists once the skill ships bundled with its gates. That bundling is the whole reason the artifact is a plugin.</p>
+
+  <h3>Mapped to ICE — Intent · Context · Expectations</h3>
+  <p>A useful lens (from intent-driven development) over artifacts we already have — a lens, not a renaming. The human owns <strong>Intent</strong> and <strong>Expectations</strong> at planning; the harness owns <strong>Context</strong> and feeds it progressively.</p>
+  <table>
+    <thead><tr><th>Craft</th><th>Owner</th><th>Where it lives</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Intent</strong> — what's wanted, constraints, failure + success scenarios, connections</td><td>the human</td><td><code>intake.md</code> + <code>stories.md</code> (the five parts)</td></tr>
+      <tr><td><strong>Expectations</strong> — the done-ness boundary, in the user's terms</td><td>the same human</td><td><code>stories.md</code> DoD + demo (of record); <code>validate.md</code>/<code>plan.md</code> derived</td></tr>
+      <tr><td><strong>Context</strong> — the how, fed progressively</td><td>the harness</td><td><code>standards.md</code> → <code>plan-ready.md</code> → <code>init.md</code> + the symbol resolver</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Presence → hooks.</strong> The human owns Expectations at planning, then steps out of execution; the gates enforce that human-authored done-ness on every attempt. So "presence in the loop" becomes mechanical and continuous — not a single human blessing of an oversized diff at the end. That substitution is sound only because Expectations are machine-checkable (<code>validate.md</code> is literal PASS/FAIL). Completeness of Intent stays the irreducible human judgment — which is why the five-part Intent gate exists.</p>
+</section>
+
+<section id="lifecycle">
+  <h2><span class="num">02</span>Lifecycle</h2>
+  <p class="lede">Planning produces validated artifacts; execution walks waves through RED → scaffold → GREEN → GATE.</p>
+  <p>Planning runs the five steps and hands off only when every Stage-2 artifact validates. Execution is autonomous: per wave, RED writes failing tests, a scaffold pass fires <em>after RED is verified</em> to create canonical stubs, GREEN fills them, and a final GATE certifies the sprint. Failures the supervisor cannot resolve surface at the next planning session — the only path back to a human.</p>
+
+  <figure>
+  <svg width="100%" viewBox="0 0 680 500" role="img"><title>agentic-agile plugin lifecycle</title><desc>Planning is interactive and human-gated, producing Stage-1 and Stage-2 artifacts. A Stage-2-complete gate guards the handoff. Execution is autonomous and hook-enforced, running RED, then a post-planner scaffold step, then GREEN, then a final GATE. Halts and escalations feed back to the next planning session.</desc>
+  <defs><marker id="ar1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect class="box" x="40" y="20" width="600" height="140" rx="16" stroke-width="0.5"/>
+  <text class="th" x="58" y="42">Planning</text>
+  <text class="ts" x="58" y="60">human in the loop · nothing runs yet</text>
+  <g class="c-teal"><rect x="60" y="76" width="270" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="195" y="100" text-anchor="middle" dominant-baseline="central">Stage 1 — contract</text>
+  <text class="ts" x="195" y="120" text-anchor="middle" dominant-baseline="central">stories.md · sprintN/plan.md</text></g>
+  <g class="c-teal"><rect x="360" y="76" width="270" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="495" y="100" text-anchor="middle" dominant-baseline="central">Stage 2 — full plan</text>
+  <text class="ts" x="495" y="120" text-anchor="middle" dominant-baseline="central">tasks · validate · plan / story</text></g>
+  <line x1="331" y1="108" x2="357" y2="108" class="arr" marker-end="url(#ar1)"/>
+  <line x1="340" y1="160" x2="340" y2="183" class="arr" marker-end="url(#ar1)"/>
+  <g class="c-amber"><rect x="210" y="185" width="260" height="50" rx="8" stroke-width="0.5"/>
+  <text class="th" x="340" y="203" text-anchor="middle" dominant-baseline="central">Stage-2 complete gate</text>
+  <text class="ts" x="340" y="221" text-anchor="middle" dominant-baseline="central">refuses handoff until artifacts valid</text></g>
+  <line x1="340" y1="235" x2="340" y2="258" class="arr" marker-end="url(#ar1)"/>
+  <rect class="box" x="40" y="260" width="600" height="150" rx="16" stroke-width="0.5"/>
+  <text class="th" x="58" y="282">Execution</text>
+  <text class="ts" x="58" y="300">autonomous · hook-enforced · no human</text>
+  <g class="c-gray"><rect x="60" y="320" width="128" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="124" y="344" text-anchor="middle" dominant-baseline="central">RED</text>
+  <text class="ts" x="124" y="364" text-anchor="middle" dominant-baseline="central">tests first, all fail</text></g>
+  <g class="c-coral"><rect x="204" y="320" width="128" height="64" rx="8" stroke-width="1"/>
+  <text class="th" x="268" y="338" text-anchor="middle" dominant-baseline="central">Scaffold</text>
+  <text class="ts" x="268" y="356" text-anchor="middle" dominant-baseline="central">post-planner stubs</text>
+  <text class="ts" x="268" y="372" text-anchor="middle" dominant-baseline="central">+ SUB-AGENT-TODO</text></g>
+  <g class="c-gray"><rect x="348" y="320" width="128" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="412" y="344" text-anchor="middle" dominant-baseline="central">GREEN</text>
+  <text class="ts" x="412" y="364" text-anchor="middle" dominant-baseline="central">fill TODO bodies</text></g>
+  <g class="c-amber"><rect x="492" y="320" width="128" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="556" y="344" text-anchor="middle" dominant-baseline="central">GATE</text>
+  <text class="ts" x="556" y="364" text-anchor="middle" dominant-baseline="central">zero suppressions</text></g>
+  <line x1="188" y1="352" x2="202" y2="352" class="arr" marker-end="url(#ar1)"/>
+  <line x1="332" y1="352" x2="346" y2="352" class="arr" marker-end="url(#ar1)"/>
+  <line x1="476" y1="352" x2="490" y2="352" class="arr" marker-end="url(#ar1)"/>
+  <line x1="340" y1="410" x2="340" y2="422" class="arr" marker-end="url(#ar1)"/>
+  <rect class="box" x="40" y="424" width="600" height="34" rx="8" stroke-width="0.5"/>
+  <text class="ts" x="340" y="441" text-anchor="middle" dominant-baseline="central">↻ halts and collected escalations surface at the next planning session</text>
+  <path d="M40 441 L18 441 L18 90 L40 90" fill="none" class="leader" marker-end="url(#ar1)"/>
+  <rect class="c-teal" x="60" y="471" width="10" height="10" rx="2"/>
+  <text class="ts" x="76" y="476" dominant-baseline="central">planning artifact</text>
+  <rect class="c-gray" x="210" y="471" width="10" height="10" rx="2"/>
+  <text class="ts" x="226" y="476" dominant-baseline="central">TDD phase</text>
+  <rect class="c-coral" x="340" y="471" width="10" height="10" rx="2"/>
+  <text class="ts" x="356" y="476" dominant-baseline="central">scaffold (new)</text>
+  <rect class="c-amber" x="500" y="471" width="10" height="10" rx="2"/>
+  <text class="ts" x="516" y="476" dominant-baseline="central">enforcement gate</text>
+  </svg>
+  <figcaption>Figure 1 — the lifecycle spine. The scaffold step (coral) is the one mechanism added to the existing playbook; it sits after RED is verified so RED still fails by absence.</figcaption>
+  </figure>
+
+  <p>Placing the scaffold pass <em>after</em> RED keeps the playbook's "RED fails because no production code exists" rule untouched, while still giving GREEN canonical, single-source stubs to fill — so two GREEN workers cannot produce two divergent implementations.</p>
+  <div class="note"><span class="lab">Review corrections</span><p>The flow below incorporates fixes from a structural review of an earlier draft: the reviewer renamed to <code>structural-reviewer</code>, remediation paths added to the structural and final gates, cause-split escalation re-entering at the planner, idempotent scaffolding, <code>standards.md</code> bound to the execution gates, and a no-progress (livelock) guard. See DESIGN.md §12.</p></div>
+  <figure>
+  <div class="mermaid">
+flowchart TD
+  REQ(["User request / outcome"])
+
+  subgraph PLAN["PLANNING - human present (interactive, human-bounded loops)"]
+    direction TB
+    INTAKE["intake (interrogator)&lt;br/&gt;five-part Intent, writes intake.md"]
+    GIN{"intake check&lt;br/&gt;five parts complete?"}
+    STD["standards (lawkeeper)&lt;br/&gt;rule digest, writes standards.md"]
+    GSTD{"standards check&lt;br/&gt;cited and non-conflicting?"}
+    PLN["planner (architect)&lt;br/&gt;stories, tasks, validate, plan, sprint plan"]
+    G2{"Stage-2 complete?&lt;br/&gt;every story valid, no TBW"}
+    INTAKE --> GIN
+    GIN -->|"no: clarify with human"| INTAKE
+    GIN -->|yes| STD
+    STD --> GSTD
+    GSTD -->|"conflict: resolve with human"| STD
+    GSTD -->|ok| PLN
+    PLN --> G2
+    G2 -->|"no: RE-PLAN (human-bounded)"| PLN
+  end
+
+  REQ --> INTAKE
+
+  SUPER["SUPERVISOR - orchestrates execution&lt;br/&gt;dispatches workers, owns gate verdicts,&lt;br/&gt;writes plan-ready.md and execution.log"]
+  G2 -->|"yes: approved plan"| SUPER
+  SUPER -->|"dispatch wave"| RED
+
+  subgraph EXEC["EXECUTION - autonomous, hook-enforced (supervisor present, human absent)"]
+    direction TB
+    RED["RED worker&lt;br/&gt;tests vs mod-common SHIMS (compile)&lt;br/&gt;writes output.md"]
+    GRED{"gate-red-verify&lt;br/&gt;each test FAILS BY ASSERTION&lt;br/&gt;no regression"}
+    PR["plan-ready.md written"]
+    SCAF["scaffolder (idempotent)&lt;br/&gt;stub NEW symbols only,&lt;br/&gt;swap shims for panic+TODO"]
+    GSCAF{"gate-scaffold-verify&lt;br/&gt;one symbol each, panic+TODO,&lt;br/&gt;no clobber of implemented"}
+    GREEN["GREEN worker&lt;br/&gt;fill TODO bodies&lt;br/&gt;writes output.md"]
+    GGREEN{"gate-green-verify&lt;br/&gt;tests pass, in scope,&lt;br/&gt;standards gates green"}
+    TICK["tick this task in plan-ready.md&lt;br/&gt;(only on pass)"]
+    SREV["structural-reviewer (renamed)&lt;br/&gt;orphan, parallel, duplicate"]
+    GSREV{"gate-structural-integrity"}
+    WAVE{"more waves?&lt;br/&gt;AND net progress this wave?"}
+    RED --> GRED
+    GRED -->|pass| PR
+    PR --> SCAF
+    SCAF --> GSCAF
+    GSCAF -->|pass| GREEN
+    GREEN --> GGREEN
+    GGREEN -->|pass| TICK
+    TICK --> SREV
+    SREV --> GSREV
+    GSREV -->|clean| WAVE
+    GSREV -->|"isolated and fixable: re-spawn GREEN"| GREEN
+  end
+
+  GRED -->|"fail: init.md feedback, re-spawn (within per-task budget)"| RED
+  GSCAF -->|"reject: init.md feedback, re-spawn same task"| SCAF
+  GGREEN -->|"fail: init.md feedback, re-spawn same task"| GREEN
+
+  WAVE -->|"yes: next wave"| SUPER
+  FG["final-gate&lt;br/&gt;full matrix, ZERO SUPPRESSIONS,&lt;br/&gt;every plan-ready.md ticked"]
+  GFG{"gate-final"}
+  WAVE -->|"no: last wave"| FG
+  FG --> GFG
+  GFG -->|pass| DONE(["Sprint merged / done"])
+  GFG -->|"fixable (bug, unticked, red): re-dispatch"| SUPER
+
+  STD -.->|"rule digest binds execution gates"| GGREEN
+
+  ESC["ESCALATION (cause-specific):&lt;br/&gt;foundation-poisoning = HALT chain, abandon its worktrees, keep merged waves&lt;br/&gt;scope or plan defect = human decision&lt;br/&gt;budget or no-progress = hard stop"]
+  GSREV -->|"foundation-poisoning: HALT"| ESC
+  GFG -->|"genuine scope change"| ESC
+  WAVE -->|"no progress: stall"| ESC
+  GRED -->|"budget exhausted"| ESC
+  GGREEN -->|"budget exhausted"| ESC
+  GSCAF -->|"budget exhausted"| ESC
+  ESC -.->|"NEXT planning session, context preserved"| PLN
+
+  classDef human fill:#e1f5ee,stroke:#0f6e56,color:#084a37;
+  classDef sup fill:#e9e3f7,stroke:#5b3fa0,color:#3a2769;
+  classDef auto fill:#eef2f7,stroke:#48586a,color:#16202e;
+  classDef gate fill:#faeeda,stroke:#8a520c,color:#553208;
+  classDef term fill:#11203a,stroke:#11203a,color:#ffffff;
+  classDef esc fill:#faece7,stroke:#9a3d1e,color:#5a2412;
+  class INTAKE,STD,PLN human;
+  class GIN,GSTD,G2,GRED,GSCAF,GGREEN,GSREV,WAVE,GFG gate;
+  class SUPER sup;
+  class RED,PR,SCAF,GREEN,TICK,SREV,FG auto;
+  class REQ,DONE term;
+  class ESC esc;
+
+  </div>
+  <figcaption>Figure 4 — corrected end-to-end flow (Mermaid)</figcaption>
+  </figure>
+
+</section>
+
+<section id="personas">
+  <h2><span class="num">03</span>The eight personas</h2>
+  <p class="lede">Each activity is its own folder under <code>pipeline/&lt;phase&gt;/&lt;NN-activity&gt;/</code> holding the same four descriptive files.</p>
+  <p>The folder is the documentation: <code>persona.md</code> (who the orchestrator dispatches), <code>init.template.md</code> (the contract handed in), <code>artifacts.md</code> (what it reads / writes and what validates each), and <code>gate.md</code> (the orchestrator's acceptance check plus failure verbs).</p>
+  <table>
+    <thead><tr><th>Phase</th><th>Persona</th><th>Identity</th><th>Mandate (one line)</th></tr></thead>
+    <tbody>
+      <tr><td>planning</td><td><code>intake</code></td><td>the interrogator</td><td>turn the raw request into a crisp, testable problem statement</td></tr>
+      <tr><td>planning</td><td><code>standards</code></td><td>the lawkeeper</td><td>assemble the exact rule set this sprint must obey</td></tr>
+      <tr><td>planning</td><td><code>planner</code></td><td>the architect</td><td>run the five planning steps; own every planning artifact</td></tr>
+      <tr><td>execution</td><td><code>red-worker</code></td><td>the falsifier</td><td>write the tests that must fail; one per task</td></tr>
+      <tr><td>execution</td><td><code>scaffolder</code></td><td>the carpenter</td><td>after RED, stub every referenced symbol exactly once</td></tr>
+      <tr><td>execution</td><td><code>green-worker</code></td><td>the minimalist</td><td>fill the stub bodies with the least code that passes</td></tr>
+      <tr><td>execution</td><td><code>structural-reviewer</code></td><td>the auditor</td><td>catch orphan modules, parallel impls, duplicate helpers</td></tr>
+      <tr><td>execution</td><td><code>final-gate</code></td><td>the notary</td><td>certify the sprint: full matrix green, zero suppressions</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><span class="lab">Adopted</span><p><code>intake</code> now carries the <strong>five-part Intent</strong> — what's wanted, constraints, failure scenarios, success scenarios, and connections — and the <code>planner</code> gate rejects a story missing failure-scenarios or connections. This makes the most-skippable judgment (front-end intent completeness) hard to skip; everything downstream of it is already hook-enforced.</p></div>
+  <div class="note"><span class="lab">Note</span><p>The <code>structural-reviewer</code> is the one role with no prior explicit spec — it is derived from the roster plus the post-mortem of a real project where two implementations of one engine shipped undetected. It is the check that would have caught that.</p></div>
+</section>
+
+<section id="ownership">
+  <h2><span class="num">04</span>Artifact ownership</h2>
+  <p class="lede">The supervisor owns every planning artifact; sub-agents never edit them.</p>
+  <p>Sub-agents never edit <code>stories.md</code>, <code>tasks.md</code>, <code>validate.md</code>, <code>plan.md</code>, <code>plan-ready.md</code>, or <code>sprintN/plan.md</code>. What each writer may touch:</p>
+  <table>
+    <thead><tr><th>Writer</th><th>May write</th></tr></thead>
+    <tbody>
+      <tr><td>supervisor</td><td>every planning artifact · <code>plan-ready.md</code> · <code>execution.log</code></td></tr>
+      <tr><td>red-worker</td><td>test files + <code>mod common</code> shims only</td></tr>
+      <tr><td>scaffolder</td><td>production stubs (panic + TODO) only · deletes shims · appends ledger</td></tr>
+      <tr><td>green-worker</td><td>production bodies (fills TODOs) + removes shim leftovers</td></tr>
+      <tr><td>structural-reviewer / final-gate</td><td>their <code>output.md</code> report only (read-only over code)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><span class="lab">Expectations of record</span><p>The user-facing definition of done — <code>stories.md</code>'s Definition of Done and Sprint demo — is owned by the same human who owns the Intent, and never drifts to the agents. <code>validate.md</code> and <code>plan.md</code> are the derived, implementation-level expressions of it. The moment "done" drifts away from the person who wanted the outcome, the agent starts deciding done for them — which is exactly what the ownership rule and the planning boundary prevent.</p></div>
+</section>
+
+<section id="revision">
+  <h2><span class="num">05</span>The revision loop</h2>
+  <p class="lede"><code>init.md</code> and <code>output.md</code> fill the playbook's "reject and re-spawn" gap.</p>
+  <p>The playbook rejects a bad attempt and re-spawns, but defines no feedback payload — a blind re-spawn repeats the mistake. <code>init.md</code> is the per-attempt contract (supervisor / scaffolder authored, append-only, turn-counted, read-only to the worker); it points at the relevant <code>plan-ready.md</code> section and, on re-spawn, carries a feedback entry derived from the prior <code>output.md</code>. <code>output.md</code> is the worker's own report.</p>
+
+  <figure>
+  <svg width="100%" viewBox="0 0 680 270" role="img"><title>Per-task revision loop with init.md and output.md</title><desc>The supervisor writes init.md. A sub-agent reads it and writes output.md. The supervisor verifies against validate.md. On pass it ticks plan-ready.md; on fail it appends a feedback entry to init.md and re-spawns. After a bounded number of attempts the supervisor escalates to the next planning session.</desc>
+  <defs><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <g class="c-amber"><rect x="420" y="14" width="210" height="34" rx="8" stroke-width="0.5"/>
+  <text class="ts" x="525" y="31" text-anchor="middle" dominant-baseline="central">pass → tick plan-ready.md, next</text></g>
+  <line x1="565" y1="60" x2="565" y2="49" class="arr" marker-end="url(#ar2)"/>
+  <text class="ts" x="575" y="56" dominant-baseline="central">pass</text>
+  <g class="c-teal"><rect x="50" y="60" width="130" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="115" y="84" text-anchor="middle" dominant-baseline="central">init.md</text>
+  <text class="ts" x="115" y="104" text-anchor="middle" dominant-baseline="central">context + feedback</text></g>
+  <g class="c-gray"><rect x="200" y="60" width="130" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="265" y="84" text-anchor="middle" dominant-baseline="central">sub-agent</text>
+  <text class="ts" x="265" y="104" text-anchor="middle" dominant-baseline="central">RED or GREEN</text></g>
+  <g class="c-coral"><rect x="350" y="60" width="130" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="415" y="84" text-anchor="middle" dominant-baseline="central">output.md</text>
+  <text class="ts" x="415" y="104" text-anchor="middle" dominant-baseline="central">the agent's report</text></g>
+  <g class="c-amber"><rect x="500" y="60" width="130" height="64" rx="8" stroke-width="0.5"/>
+  <text class="th" x="565" y="84" text-anchor="middle" dominant-baseline="central">verify</text>
+  <text class="ts" x="565" y="104" text-anchor="middle" dominant-baseline="central">vs validate.md</text></g>
+  <line x1="180" y1="92" x2="198" y2="92" class="arr" marker-end="url(#ar2)"/>
+  <line x1="330" y1="92" x2="348" y2="92" class="arr" marker-end="url(#ar2)"/>
+  <line x1="480" y1="92" x2="498" y2="92" class="arr" marker-end="url(#ar2)"/>
+  <path d="M565 124 L565 158 L115 158 L115 125" fill="none" stroke="#993c1d" stroke-width="1" marker-end="url(#ar2)"/>
+  <text class="ts" x="340" y="173" text-anchor="middle" dominant-baseline="central">fail → append feedback to init.md, re-spawn</text>
+  <rect class="box" x="40" y="192" width="600" height="32" rx="8" stroke-width="0.5"/>
+  <text class="ts" x="340" y="208" text-anchor="middle" dominant-baseline="central">after max attempts the supervisor escalates to the next planning session (§6)</text>
+  <rect class="c-teal" x="130" y="242" width="10" height="10" rx="2"/>
+  <text class="ts" x="146" y="247" dominant-baseline="central">supervisor context</text>
+  <rect class="c-coral" x="310" y="242" width="10" height="10" rx="2"/>
+  <text class="ts" x="326" y="247" dominant-baseline="central">sub-agent output</text>
+  <rect class="c-amber" x="480" y="242" width="10" height="10" rx="2"/>
+  <text class="ts" x="496" y="247" dominant-baseline="central">decision</text>
+  </svg>
+  <figcaption>Figure 2 — the per-task revision loop. Fully autonomous; the only exit to a human is the bounded escalation at the bottom.</figcaption>
+  </figure>
+
+  <p>Scope distinction so nothing duplicates: <code>init.md</code> is per-task-attempt (context + feedback), <code>output.md</code> is per-task-attempt (the report), <code>plan-ready.md</code> is the per-story static spec written once, and <code>execution.log</code> is the per-sprint one-line index.</p>
+</section>
+
+<section id="judgment">
+  <h2><span class="num">06</span>Supervisor judgment</h2>
+  <p class="lede">On an unresolvable gate failure, the supervisor chooses — against a written rule.</p>
+  <p>The supervisor classifies each failure and logs the choice: <strong>halt</strong> the dependency chain when the failure poisons a shared foundation (e.g. two divergent engines for one abstraction), or <strong>continue</strong> independent work and collect the escalation when the failure is isolated. The test is simply: does the unresolved failure sit on a dependency that other pending work needs? Every choice is written to <code>execution.log</code> — auditable and replayable — and surfaces at the next planning session for the human to confirm or override.</p>
+</section>
+
+<section id="validation">
+  <h2><span class="num">07</span>Validation model</h2>
+  <p class="lede">md-db / KDL validates the markdown artifacts; grep-gates cover what it structurally cannot.</p>
+  <p><code>md-db validate &lt;dir&gt; --schema &lt;x&gt;.kdl</code> enforces YAML frontmatter, field types, enums, patterns, required sections, and cross-document reference integrity. It cannot enumerate dynamically-named sections — the playbook's <code>## Tn — Title</code> headings — so validation is two-layered: schemas for structure, <code>bin/</code> grep-gates for the dynamic body shape.</p>
+  <table>
+    <thead><tr><th>Schema</th><th>Scope</th><th>Coverage</th></tr></thead>
+    <tbody>
+      <tr><td><code>agent-io.kdl</code></td><td>per-task-attempt comms — <code>init.md</code>, <code>output.md</code></td><td>fully validated (new artifacts, fixed sections)</td></tr>
+      <tr><td><code>planning-artifacts.kdl</code></td><td>stories / tasks / validate / plan / plan-ready / sprint-plan</td><td>frontmatter + fixed sections (see OPEN-7)</td></tr>
+      <tr><td><code>ledger.kdl</code></td><td><code>execution.log</code></td><td>wrapping doc; line format enforced by <code>bin/</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="backend">
+  <h2><span class="num">08</span>Symbol-resolution backend</h2>
+  <p class="lede">One subsystem of a prior build is harvested to back the two gates md-db and grep cannot do well.</p>
+  <p>Two gates need source-code intelligence that operates on code, not markdown: <code>gate-scaffold-verify</code> ("is this symbol defined exactly once?") and <code>gate-structural-integrity</code> ("two definitions filling one role?"). grep is fragile here — it matches comments, misses overloads, and cannot see semantic duplication. So the code-intelligence layer of the earlier build is harvested; everything else is left out.</p>
+
+  <figure>
+  <svg width="100%" viewBox="0 0 680 412" role="img"><title>Harvesting one subsystem of the prior build into two plugin gates</title><desc>The prior build has three layers. Its orchestration layer and plan-DSL/projection layer are left out. Only the code-intelligence layer is harvested, and it backs gate-scaffold-verify and gate-structural-integrity, each with a grep fallback. md-db validates the markdown artifacts separately.</desc>
+  <defs><marker id="ar3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect x="30" y="44" width="326" height="270" rx="14" fill="none" stroke="rgba(26,36,51,.16)" stroke-width="0.5" stroke-dasharray="4 4"/>
+  <text class="th" x="44" y="62">prior build — three layers</text>
+  <g class="c-teal"><rect x="40" y="72" width="306" height="80" rx="8" stroke-width="1"/>
+  <text class="th" x="193" y="92" text-anchor="middle" dominant-baseline="central">Code intelligence  · harvest</text>
+  <text class="ts" x="193" y="112" text-anchor="middle" dominant-baseline="central">ast.rs · resolver.rs (tree-sitter, 6 langs)</text>
+  <text class="ts" x="193" y="130" text-anchor="middle" dominant-baseline="central">locate_symbol · search · resolve_symbol</text></g>
+  <g class="c-gray"><rect x="40" y="166" width="306" height="58" rx="8" stroke-width="0.5" stroke-dasharray="4 4"/>
+  <text class="th" x="193" y="186" text-anchor="middle" dominant-baseline="central">Orchestration</text>
+  <text class="ts" x="193" y="206" text-anchor="middle" dominant-baseline="central">left out — platform supersedes it</text></g>
+  <g class="c-gray"><rect x="40" y="238" width="306" height="58" rx="8" stroke-width="0.5" stroke-dasharray="4 4"/>
+  <text class="th" x="193" y="258" text-anchor="middle" dominant-baseline="central">Plan DSL + projection</text>
+  <text class="ts" x="193" y="278" text-anchor="middle" dominant-baseline="central">left out — would replace plan.md</text></g>
+  <rect x="378" y="44" width="270" height="248" rx="14" fill="none" stroke="rgba(26,36,51,.16)" stroke-width="0.5"/>
+  <text class="th" x="392" y="62">plugin gates it backs</text>
+  <g class="c-blue"><rect x="390" y="78" width="250" height="86" rx="8" stroke-width="0.5"/>
+  <text class="th" x="515" y="98" text-anchor="middle" dominant-baseline="central">gate-scaffold-verify</text>
+  <text class="ts" x="515" y="118" text-anchor="middle" dominant-baseline="central">symbol defined exactly once?</text>
+  <text class="ts" x="515" y="138" text-anchor="middle" dominant-baseline="central">resolver backend · grep fallback</text></g>
+  <g class="c-blue"><rect x="390" y="184" width="250" height="86" rx="8" stroke-width="0.5"/>
+  <text class="th" x="515" y="204" text-anchor="middle" dominant-baseline="central">gate-structural-integrity</text>
+  <text class="ts" x="515" y="224" text-anchor="middle" dominant-baseline="central">parallel impl / duplicate symbol</text>
+  <text class="ts" x="515" y="244" text-anchor="middle" dominant-baseline="central">resolver backend · grep fallback</text></g>
+  <path d="M346 112 L368 112 L368 121 L388 121" fill="none" stroke="#0f6e56" stroke-width="1" marker-end="url(#ar3)"/>
+  <path d="M346 112 L368 112 L368 227 L388 227" fill="none" stroke="#0f6e56" stroke-width="1" marker-end="url(#ar3)"/>
+  <rect class="box" x="30" y="326" width="618" height="38" rx="8" stroke-width="0.5"/>
+  <text class="ts" x="339" y="345" text-anchor="middle" dominant-baseline="central">complementary backends, both optional:  md-db validates the .md artifacts  ·  symbol-resolver analyzes the source code</text>
+  <rect class="c-teal" x="170" y="382" width="10" height="10" rx="2"/>
+  <text class="ts" x="186" y="387" dominant-baseline="central">harvested into the plugin</text>
+  <rect class="c-gray" x="400" y="382" width="10" height="10" rx="2"/>
+  <text class="ts" x="416" y="387" dominant-baseline="central">left out</text>
+  </svg>
+  <figcaption>Figure 3 — harvest split. The orchestration layer is left out because the platform now provides it; the plan-DSL layer because it would replace plan.md.</figcaption>
+  </figure>
+
+  <p>Integration is optional with a fallback so the plugin never hard-fails: the two gates call the symbol resolver if it is present, else fall back to grep with a logged "weaker check" warning. md-db (over the markdown artifacts) and the symbol resolver (over the source code) are complementary and independently optional; neither drags in the orchestration engine.</p>
+</section>
+
+<section id="primitives">
+  <h2><span class="num">09</span>Platform-primitive mapping</h2>
+  <p class="lede">Nothing custom that the platform already provides.</p>
+  <table>
+    <thead><tr><th>Design element</th><th>Platform primitive</th></tr></thead>
+    <tbody>
+      <tr><td>deterministic gates</td><td><code>hooks/hooks.json</code> — <code>SubagentStop</code>, <code>Stop</code>, <code>PostToolUse</code></td></tr>
+      <tr><td>the workflow itself</td><td><code>skills/</code></td></tr>
+      <tr><td>the eight roles</td><td><code>agents/</code> (assembled from personas)</td></tr>
+      <tr><td>gate scripts + ledger writer</td><td><code>bin/</code></td></tr>
+      <tr><td>per-sub-agent isolation</td><td><code>isolation: "worktree"</code> (built in)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><span class="lab">Constraint</span><p>Plugin-provided subagents ignore <code>hooks</code> / <code>mcpServers</code> / <code>permissionMode</code> frontmatter, so every gate is wired in the top-level <code>hooks.json</code> matched by <code>agent_type</code> — not in the agent files.</p></div>
+</section>
+
+<section id="layout">
+  <h2><span class="num">10</span>Plugin layout</h2>
+  <p class="lede">The <code>pipeline/</code> tree is the source of truth; <code>agents/</code> is assembled from it. <span style="color:var(--ink-soft)">For the full implementation — hooks.json wiring, md-db/ctx-symbols invocation, the on-disk data plane, worktree lifecycle, and a concrete end-to-end run trace — see <code>ARCHITECTURE.md</code> in the package.</span></p>
+<pre><span class="k">agentic-agile/</span>
+  .claude-plugin/plugin.json   <span class="c"># manifest</span>
+  STRUCTURE.md                 <span class="c"># self-documenting index</span>
+  pipeline/
+    planning/                  <span class="c"># interactive, human-gated</span>
+      00-intake/    01-standards/    02-planner/
+    execution/                 <span class="c"># autonomous, hook-enforced</span>
+      00-red/  01-scaffold/  02-green/  03-structural-review/  04-final-gate/
+    <span class="c"># each activity folder: persona.md · init.template.md · artifacts.md · gate.md</span>
+  schemas/                     <span class="c"># md-db KDL</span>
+    agent-io.kdl  planning-artifacts.kdl  ledger.kdl  SCHEMA-NOTES.md
+  hooks/hooks.json             <span class="c"># which gate fires on which event</span>
+  bin/                         <span class="c"># gate scripts over md-db + greps</span>
+    gate-stage2-complete  gate-red-verify  gate-scaffold-verify
+    gate-green-verify  gate-structural-integrity  gate-final
+    gate-plan-shape  gate-standards-cited  gate-ledger-format  log-execution
+  agents/                      <span class="c"># assembled from pipeline/*/persona.md</span></pre>
+</section>
+
+<section id="open">
+  <h2><span class="num">11</span>Open questions</h2>
+  <p class="lede">The forks that still block a final build. Two were resolved this round.</p>
+  <div class="open"><span class="tag">OPEN-1</span><p>Scaffolder = the supervisor itself, or a dispatched stub-only sub-agent (which needs its own "implemented a body → reject" guard)?</p></div>
+  <div class="open"><span class="tag">OPEN-2</span><p>Does <code>skills/</code> become the canonical copy of the playbook (replace), or call out to the existing doc (wrap)? Biggest layout impact.</p></div>
+  <div class="open"><span class="tag">OPEN-3</span><p>Does the Stage-2-complete gate run as a hook, or as a supervisor self-check step? (Planning is interactive, so a hook is awkward.)</p></div>
+  <div class="open"><span class="tag">OPEN-4</span><p><code>init.md</code> / <code>output.md</code> path scheme — a per-attempt dir like <code>sN-NN-&lt;slug&gt;/&lt;task&gt;/attempt-K/</code>, or flatter?</p></div>
+  <div class="open"><span class="tag">OPEN-5</span><p><code>output.md</code> — one file appended per attempt, or a fresh file per attempt?</p></div>
+  <div class="open"><span class="tag">OPEN-6</span><p>Max revision attempts before the supervisor escalates to the next planning session — what default?</p></div>
+  <div class="open"><span class="tag">OPEN-7</span><p>Add YAML frontmatter to <code>stories.md</code> / <code>plan.md</code> so md-db validates them structurally, or keep them frontmatter-free and grep-gate only?</p></div>
+  <div class="open done"><span class="tag">OPEN-8</span><p><strong>Leaning resolved.</strong> Symbol-backend packaging — recommendation is to extract a minimal <code>ctx-symbols</code> helper (locate_symbol / resolve_symbol only) rather than ship the whole prior binary.</p></div>
+</section>
+
+<footer>
+  agentic-agile · consolidated plugin design · design stage, pre-build. Figures 1–3 are the same diagrams shown during design, embedded here. Companion files: <code>DESIGN.md</code> (source), the <code>agentic-agile-plugin/</code> tree, and the three <code>schemas/*.kdl</code>.
+</footer>
+</div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '13px', primaryColor: '#eef2f7', primaryBorderColor: '#48586a', primaryTextColor: '#16202e', lineColor: '#55606f', tertiaryColor: '#f6f3ec' } });
+</script>

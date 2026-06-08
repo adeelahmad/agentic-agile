@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# lineage — task-scoped lineage for agentic-agile (file-based, no FUSE).
+# Global append-only lineage.jsonl + per-task transcripts. Sub-agents get a
+# READ-ONLY task slice staged into their worktree (.lineage/); the supervisor reads
+# the global store. These hooks NEVER block (always exit 0) — lineage must not stop work.
+#
+#   lineage init                  ensure the store exists
+#   lineage stage-in              copy this task's transcript -> ./.lineage (read-only)   [SubagentStart]
+#   lineage record                append the hook's tool-call event (stdin JSON)          [PostToolUse *]
+#   lineage stage-out             remove ./.lineage; log a stop marker                    [SubagentStop *]
+#   lineage view --all|--task ID  read the store (supervisor)
+#   lineage compact               keep last N events/task, archive the rest
+#
+# Per-worktree contract: the supervisor writes ./.agentic/task.env at dispatch with
+#   TASK_ID, ATTEMPT, AGENT_ROLE, AGENTIC_LINEAGE_DIR  (env overrides it).
+set -uo pipefail
+
+WT="${AGENTIC_WORKTREE:-$PWD}"
+[ -f "$WT/.agentic/task.env" ] && { set -a; . "$WT/.agentic/task.env"; set +a; }
+TASK_ID="${TASK_ID:-unknown}"
+STORE="${AGENTIC_LINEAGE_DIR:-$WT/.agentic/lineage}"
+VIEW="$WT/.lineage"
+GLOBAL="$STORE/lineage.jsonl"
+TDIR="$STORE/transcripts/$TASK_ID"
+
+ts() { date -u +%FT%TZ; }
+ensure() { mkdir -p "$STORE/transcripts" "$STORE/compacted" "$TDIR" 2>/dev/null || true; }
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  -h|--help|help)
+    cat <<'USAGE'
+lineage — task-scoped lineage for agentic-agile (file-based, never blocks).
+
+USAGE: lineage <command>
+  init             ensure the lineage store exists
+  stage-in         copy this task's transcript -> ./.lineage (read-only)   [SubagentStart]
+  record           append the hook's tool-call event (reads stdin JSON)    [PostToolUse *]
+  stage-out        remove ./.lineage; log a stop marker                    [SubagentStop *]
+  view --all       print the global lineage
+  view --task ID   print one task's events
+  compact          keep last N events/task (AGENTIC_LINEAGE_KEEP, default 200)
+
+CONTRACT: reads ./.agentic/task.env (TASK_ID, ATTEMPT, AGENT_ROLE, AGENTIC_LINEAGE_DIR).
+EXIT CODES: always 0 — lineage must never block an agent; errors are best-effort.
+USAGE
+    exit 0 ;;
+  init) ensure; echo "lineage store: $STORE" ;;
+
+  stage-in)
+    ensure
+    rm -rf "$VIEW" 2>/dev/null || true; mkdir -p "$VIEW" 2>/dev/null || true
+    if [ -d "$TDIR" ] && [ -n "$(ls -A "$TDIR" 2>/dev/null)" ]; then
+      cp -R "$TDIR/." "$VIEW/" 2>/dev/null || true
+    else
+      printf '# task %s — no prior lineage yet\n' "$TASK_ID" > "$VIEW/transcript.md" 2>/dev/null || true
+    fi
+    printf 'READ-ONLY. Your task history. You cannot write here (by design).\n' > "$VIEW/README" 2>/dev/null || true
+    chmod -R a-w "$VIEW" 2>/dev/null || true
+    exit 0 ;;
+
+  record)
+    ensure
+    payload="$(cat 2>/dev/null || true)"
+    tool="$(printf '%s' "$payload" | sed -nE 's/.*"tool_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -1)"
+    file="$(printf '%s' "$payload" | sed -nE 's/.*"file_path"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -1)"
+    evt="$(printf '{"ts":"%s","task":"%s","attempt":"%s","agent":"%s","tool":"%s","file":"%s"}' \
+            "$(ts)" "$TASK_ID" "${ATTEMPT:-}" "${AGENT_ROLE:-}" "${tool:-}" "${file:-}")"
+    printf '%s\n' "$evt" >> "$GLOBAL" 2>/dev/null || true
+    printf '%s\n' "$evt" >> "$TDIR/events.jsonl" 2>/dev/null || true
+    exit 0 ;;
+
+  stage-out)
+    ensure
+    if [ -d "$VIEW" ]; then chmod -R u+w "$VIEW" 2>/dev/null || true; rm -rf "$VIEW" 2>/dev/null || true; fi
+    printf '{"ts":"%s","task":"%s","event":"stage-out"}\n' "$(ts)" "$TASK_ID" >> "$GLOBAL" 2>/dev/null || true
+    exit 0 ;;
+
+  view)
+    case "${1:-}" in
+      --all)  [ -f "$GLOBAL" ] && cat "$GLOBAL" || echo "(empty)";;
+      --task) t="${2:-$TASK_ID}"; f="$STORE/transcripts/$t/events.jsonl"; [ -f "$f" ] && cat "$f" || echo "(no events for $t)";;
+      *) echo "usage: lineage view --all | --task <id>";;
+    esac ;;
+
+  compact)
+    ensure; N="${AGENTIC_LINEAGE_KEEP:-200}"
+    for d in "$STORE"/transcripts/*/; do
+      f="${d}events.jsonl"; [ -f "$f" ] || continue
+      n="$(wc -l < "$f" 2>/dev/null || echo 0)"
+      if [ "${n:-0}" -gt "$N" ]; then
+        head -n "$((n-N))" "$f" >> "$STORE/compacted/$(basename "$d").jsonl" 2>/dev/null || true
+        tail -n "$N" "$f" > "$f.tmp" 2>/dev/null && mv "$f.tmp" "$f" 2>/dev/null || true
+      fi
+    done
+    echo "compacted (keep $N/task)";;
+
+  *) echo "usage: lineage {init|stage-in|record|stage-out|view|compact}" >&2; exit 0 ;;
+esac

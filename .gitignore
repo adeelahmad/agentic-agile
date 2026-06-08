@@ -1,0 +1,5 @@
+# lineage store + per-worktree control dir (never tracked, never merged)
+.agentic/
+.lineage/
+# rust build
+target/

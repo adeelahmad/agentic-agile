@@ -1,0 +1,52 @@
+// planning-artifacts.kdl — schema for the playbook's planning artifacts.
+// NOTE: requires YAML frontmatter on these artifacts (the playbook examples
+// have none today). Adding frontmatter is a DECISION — see SCHEMA-NOTES.md.
+// md-db validates frontmatter + the FIXED sections below. The dynamic
+// `## Tn — Title` headings are validated by bin/gate-plan-shape (grep), NOT here.
+
+type "stories" {
+    field "type"   type="string" required=#true                     // "stories"
+    field "sprint" type="number" required=#true
+    section "Sprint goal"        required=#true
+    section "Sprint demo"        required=#true
+    section "Definition of Done" required=#true
+    section "Out of scope"       required=#true
+    section "User stories"       required=#true
+    section "Story dependency graph" required=#true
+}
+
+type "tasks" {
+    field "type"  type="string" required=#true                      // "tasks"
+    field "story" type="string" required=#true pattern="^S\\d+-\\d+$"
+    // per-task `## Tn` sections are dynamic -> grep-gate, not md-db
+}
+
+type "validate" {
+    field "type"  type="string" required=#true                      // "validate"
+    field "story" type="string" required=#true pattern="^S\\d+-\\d+$"
+    section "Pre-flight"     required=#true
+    section "Final sign-off" required=#true
+}
+
+type "plan" {
+    field "type"  type="string" required=#true                      // "plan" (tests-only)
+    field "story" type="string" required=#true pattern="^S\\d+-\\d+$"
+    field "scope" type="string" required=#true                      // must read "tests only"
+}
+
+type "plan-ready" {
+    field "type"  type="string" required=#true                      // "plan-ready"
+    field "story" type="string" required=#true pattern="^S\\d+-\\d+$"
+    field "from_red_at" type="string" required=#true pattern="^\\d{4}-\\d{2}-\\d{2}T"
+}
+
+type "sprint-plan" {
+    field "type"   type="string" required=#true                     // "sprint-plan"
+    field "sprint" type="number" required=#true
+    field "stage"  type="enum" required=#true { values "1" "2" }
+    section "Sprint goal"          required=#true
+    section "Critical path"        required=#true
+    section "Cross-cutting gates"  required=#true
+}
+
+ref-format { string-id pattern="^S\\d+-\\d+$" ; relative-path pattern="\\.md$" }

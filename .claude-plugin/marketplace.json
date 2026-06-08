@@ -1,0 +1,11 @@
+{
+  "name": "agentic-agile-marketplace",
+  "owner": { "name": "Adeel Ahmad" },
+  "plugins": [
+    {
+      "name": "agentic-agile",
+      "source": "./plugin",
+      "description": "Two-stage planning + two-phase TDD execution with deterministic hook gates, per-task lineage, and a memory-producing retrospective."
+    }
+  ]
+}

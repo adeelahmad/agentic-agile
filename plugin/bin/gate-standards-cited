@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# standards.md gate: every rule bullet under "## Active rules" must cite a real
+# source (CLAUDE.md Rn, a rules/<lang>/<file>, or a docs/agents/*.md path). A bullet
+# with no citation is a dangling rule. (No `set -e`: grep-no-match must not be read
+# as a block; this gate emits exit 2 only for an actual dangling citation.)
+set -uo pipefail
+GATE_NAME="gate-standards-cited"
+
+# Resolve standards.md: $1, $STANDARDS_FILE, or auto-discover under the repo.
+sf="${1:-${STANDARDS_FILE:-}}"
+if [ -z "$sf" ]; then
+  sf="$(find . -maxdepth 6 -name standards.md 2>/dev/null | head -1)"
+fi
+if [ -z "$sf" ] || [ ! -f "$sf" ]; then
+  echo "WARN[$GATE_NAME]: standards.md not found; citation check skipped (weaker)" >&2
+  exit 0
+fi
+
+# Bullet lines in the "Active rules" section that carry no recognizable citation.
+dangling="$(awk '
+  /^#+.*[Aa]ctive rules/ {insec=1; next}
+  insec && /^#+[[:space:]]/ {insec=0}
+  insec && /^[[:space:]]*[-*][[:space:]]/ {print}
+' "$sf" | grep -vE 'CLAUDE\.md|R[0-9]+|rules/|docs/|\.md|\.rs|\.toml' || true)"
+
+if [ -n "$dangling" ]; then
+  echo "BLOCK[$GATE_NAME]: rule bullet(s) cite no source:" >&2
+  echo "$dangling" >&2
+  exit 2
+fi
+
+echo "[$GATE_NAME] all active-rule bullets carry a citation" >&2
+exit 0

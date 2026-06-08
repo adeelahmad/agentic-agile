@@ -1,0 +1,41 @@
+{
+  "skill_name": "agentic-agile",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Plan and build a small Rust library that parses a semver string into (major, minor, patch). Use a sprint with TDD.",
+      "expected_output": "A planning set (stories.md with five-part intent; per-story tasks.md/validate.md/plan.md; a sprint plan) approved by the human, then an autonomous run where RED tests are written first and fail by assertion, the scaffolder leaves panic+SUB-AGENT-TODO stubs, GREEN makes them pass, and the final gate is green with zero suppressed tests.",
+      "assertions": [
+        "stories.md exists and each story carries all five intent parts (what, constraints, failure scenarios, success scenarios, connections)",
+        "each story has tasks.md, validate.md, and a tests-only plan.md",
+        "RED tests are written before any production code, and the RED diff touches only test files and marked shims (// agentic:shim)",
+        "scaffolded production stubs contain panic(\"SUB-AGENT-TODO\") and no real implementation",
+        "no test is suppressed anywhere (#[ignore], .skip) in the final tree",
+        "plan-ready.md checkboxes are ticked only after the corresponding test passes",
+        "the final gate reports the standards matrix green with zero suppressions",
+        "before reporting done, each worker ran bin/selfcheck (and md-db validate on its .md output), so gate blocks on the hook are rare"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "here's a vague ask: 'make the config loader better'. run it through planning.",
+      "expected_output": "Planning surfaces the missing intent: the planner refuses to advance to Stage-2 because the story lacks failure scenarios and success criteria, and asks the human to supply them rather than inventing scope. Execution does not start.",
+      "assertions": [
+        "the run does NOT enter autonomous execution",
+        "the planner flags the missing five-part intent (at least failure and success scenarios) and requests human input",
+        "no tasks.md or plan.md is fabricated for the underspecified story"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "During execution a GREEN task keeps failing one flaky test across 3 attempts. What does the supervisor do?",
+      "expected_output": "The per-task budget (max 3) is exhausted and the supervisor escalates to the next planning session with the attempt history as context, rather than suppressing or skipping the test. Any memory drawn from this says to fix the flakiness, never to skip the test.",
+      "assertions": [
+        "the test is never suppressed or skipped to force a pass",
+        "after the third failed attempt the task escalates rather than looping forever",
+        "escalation re-enters at the planner with the attempt history preserved",
+        "any retrospective memory from this is phrased as 'fix the flakiness', never 'skip the test'"
+      ]
+    }
+  ]
+}

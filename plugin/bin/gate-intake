@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# intake gate: the planning intake must carry the FIVE-PART intent — what's wanted,
+# constraints, failure scenarios, success scenarios, and connections. A story planned
+# without failure/success scenarios is the #1 cause of wrong-scope builds.
+# Run as a self-check before reporting; also wired as the SubagentStop(intake) backstop.
+set -uo pipefail
+GATE_NAME="gate-intake"
+
+f="${1:-${INTAKE_FILE:-}}"
+if [ -z "$f" ]; then
+  f="$(find . -maxdepth 6 -name intake.md 2>/dev/null | head -1)"
+  [ -z "$f" ] && f="$(find . -maxdepth 6 -name stories.md 2>/dev/null | head -1)"
+fi
+if [ -z "$f" ] || [ ! -f "$f" ]; then
+  echo "WARN[$GATE_NAME]: no intake.md/stories.md found; five-part intent check skipped (weaker)" >&2
+  exit 0
+fi
+
+# md-db structural validation when stories.md + schema are available.
+if command -v md-db >/dev/null 2>&1 && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/schemas/planning-artifacts.kdl" ]; then
+  case "$f" in
+    */stories.md) md-db validate "$(dirname "$f")" --schema "${CLAUDE_PLUGIN_ROOT}/schemas/planning-artifacts.kdl" \
+        || { echo "BLOCK[$GATE_NAME]: $f failed planning-artifacts.kdl" >&2; exit 2; } ;;
+  esac
+fi
+
+# Five-part intent: each concept must appear (heading or label), case-insensitive.
+missing=""
+grep -qiE 'what|intent|outcome|goal'         "$f" || missing="$missing what/intent"
+grep -qiE 'constraint'                        "$f" || missing="$missing constraints"
+grep -qiE 'failure|failing|negative|anti-'    "$f" || missing="$missing failure-scenarios"
+grep -qiE 'success|acceptance|done'           "$f" || missing="$missing success-scenarios"
+grep -qiE 'connection|depend|integrat|relat'  "$f" || missing="$missing connections"
+
+if [ -n "$missing" ]; then
+  echo "BLOCK[$GATE_NAME]: five-part intent incomplete in $f — missing:$missing" >&2
+  echo "  (a story without failure + success scenarios must not advance to planning)" >&2
+  exit 2
+fi
+echo "[$GATE_NAME] five-part intent present in $f" >&2
+exit 0

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Append one transition line to docs/agents/sprintN/execution.log (only writer + supervisor).
+set -euo pipefail
+printf '%s %s %s %s %s\n' "$(date -u +%FT%TZ)" "$1" "$2" "$3" "${4:-}" >> "$5"

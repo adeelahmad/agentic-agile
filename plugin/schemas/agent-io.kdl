@@ -1,0 +1,75 @@
+// agent-io.kdl — the inter-agent comms channel (init.md <-> output.md)
+// Validate: md-db validate <attempt-dir> --schema schemas/agent-io.kdl --users users.yaml
+// init.md   = orchestrator's contract TO a worker   (read-only to the worker)
+// output.md = worker's structured result BACK        (the worker writes this)
+// (This is the channel the earlier draft called "instructions"; filename is init.md.)
+
+relation "instructs"     inverse="instructed_by" cardinality="one"   // init -> output
+relation "for_task"      cardinality="one"                           // doc -> task id
+relation "supersedes"    inverse="superseded_by" cardinality="one"   // attempt K -> K-1
+relation "blocks"        inverse="blocked_by" cardinality="many"
+relation "related"       cardinality="many"
+
+// ── init.md : orchestrator/scaffolder -> worker ───────────────────────────
+type "init" {
+    field "type"        type="string" required=#true                 // "init"
+    field "agent_role"  type="enum"   required=#true {
+        values "intake" "standards" "planner" "scaffolder" \
+               "red-worker" "green-worker" "structural-reviewer" "final-gate" "archivist"
+    }
+    field "task_id"     type="string" required=#true pattern="^[A-Za-z0-9._/-]+$"
+    field "attempt"     type="number" required=#true                 // turn count; append-only
+    field "wave"        type="number"
+    field "issued_by"   type="user"   required=#true                 // the orchestrator
+    field "issued_at"   type="string" required=#true pattern="^\\d{4}-\\d{2}-\\d{2}T"
+    field "allowed_tools" type="string[]" required=#true             // capability scope
+    field "allowed_paths" type="string[]"                           // files worker may touch
+    field "model"       type="string"                               // optional model override
+
+    section "Mandate"   required=#true                              // what to do
+    section "Scope"     required=#true {                            // boundaries
+        section "May"     required=#true
+        section "May Not" required=#true
+    }
+    section "Inputs"    required=#true                              // refs to read (plan-ready.md etc.)
+    section "Scaffold"                                              // scaffolder's create/update/delete log
+    section "Feedback"                                             // on re-spawn: what prior attempt got wrong
+    section "Acceptance" required=#true                            // what the orchestrator will check
+}
+
+// ── output.md : worker -> orchestrator ─────────────────────────────────────
+type "output" {
+    field "type"        type="string" required=#true                // "output"
+    field "agent_role"  type="enum"   required=#true {
+        values "intake" "standards" "planner" "scaffolder" \
+               "red-worker" "green-worker" "structural-reviewer" "final-gate" "archivist"
+    }
+    field "task_id"     type="string" required=#true pattern="^[A-Za-z0-9._/-]+$"
+    field "attempt"     type="number" required=#true
+    field "instructed_by" type="ref"                                // links back to init.md
+    field "status"      type="enum"   required=#true {
+        values "ok" "retry" "re-plan" "escalate" "abort" "reject"
+    }
+    field "verb"        type="enum" {                               // failure-recovery verb if not ok
+        values "RETRY" "RE-PLAN" "ESCALATE" "ABORT" "REJECT"
+    }
+    field "produced_at" type="string" required=#true pattern="^\\d{4}-\\d{2}-\\d{2}T"
+    field "diff_files"  type="number"
+    field "agent"       type="user"   required=#true
+
+    section "Summary"   required=#true                              // one paragraph
+    section "Result"    required=#true {                            // structured detail
+        table {
+            column "Check"  type="string" required=#true
+            column "Status" type="string" required=#true
+            column "Detail" type="string"
+        }
+    }
+    section "Findings"                                             // escalations / smells / why-not-ok
+    section "Next"      required=#true                             // what the orchestrator should do
+}
+
+ref-format {
+    string-id     pattern="^[A-Za-z0-9._/-]+$"
+    relative-path pattern="\\.md$"
+}

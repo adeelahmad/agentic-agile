@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "SubagentStart": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/lineage stage-in" } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Write", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-validate-artifact" } ] },
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/lineage record" } ] }
+    ],
+    "SubagentStop": [
+      { "matcher": "intake", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-intake" } ] },
+      { "matcher": "standards", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-standards-cited" } ] },
+      { "matcher": "planner", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-stage2-complete" } ] },
+      { "matcher": "archivist", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-memory" } ] },
+      { "matcher": "red-worker", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-red-verify" } ] },
+      { "matcher": "scaffolder", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-scaffold-verify" } ] },
+      { "matcher": "green-worker", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-green-verify" } ] },
+      { "matcher": "structural-reviewer", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-structural-integrity" } ] },
+      { "matcher": "final-gate", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-final" } ] },
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/lineage stage-out" } ] }
+    ]
+  }
+}

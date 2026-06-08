@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# RED gate: every NEW test fails BY ASSERTION (not compile error), none regressed,
+# diff touches only test + shim files, output.md validates. (Target: Rust.)
+GATE_NAME="gate-red-verify"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+: "${CLAUDE_PLUGIN_ROOT:=$(cd "$HERE/.." && pwd)}"
+# shellcheck source=/dev/null
+source "$HERE/_gatelib.sh"
+
+# 1) output.md / init.md structure.
+validate_agent_io
+
+# 2) Parse output.md Result table: no NEW test (a `::` Check) may be PASS; >=1 FAIL.
+[ -n "${ATTEMPT_DIR:-}" ] || warn "ATTEMPT_DIR unset; output.md checks skipped (relying on cargo)"
+if out="$(find_in_attempt output.md)"; then
+  test_rows="$(grep -E '^\|.*::.*\|' "$out" || true)"
+  if [ -n "$test_rows" ]; then
+    if echo "$test_rows" | grep -qiE '\|[[:space:]]*PASS[[:space:]]*\|'; then
+      fail "a NEW test PASSED in RED (test exercises nothing) — output.md has a PASS row"
+    fi
+    echo "$test_rows" | grep -qiE '\|[[:space:]]*FAIL[[:space:]]*\|' \
+      || fail "no FAILing test row in output.md — RED produced no failing test"
+  else
+    warn "output.md Result has no recognizable test rows (path::fn); relying on cargo run"
+  fi
+  if grep -qiE 'regressed=[1-9]' "$out"; then
+    fail "RED regressed a previously-passing test (regressed>0 in output.md)"
+  fi
+fi
+
+# 3) Diff scope: only test files + shim module.
+: "${TEST_GLOBS:=*/tests/*.rs tests/*.rs */tests/common/*.rs tests/common/*.rs **/tests/**}"
+while IFS= read -r p; do
+  [ -z "$p" ] && continue
+  path_matches_any "$p" "$TEST_GLOBS" \
+    || fail "RED diff touches a non-test path: $p (allowed: $TEST_GLOBS)"
+done < <(changed_paths)
+
+# 4) Fail-by-assertion: tests must COMPILE against shims, then FAIL.
+if [ "${GATE_RUN_TESTS:-auto}" != "0" ] && is_cargo_repo; then
+  root="$(repo_dir)"
+  note "compiling tests (must succeed against mod-common shims)"
+  ( cd "$root" && cargo test --no-run --workspace ) \
+    || fail "RED tests do NOT compile — they fail by missing symbol, not by assertion (add mod-common shims)"
+  note "running tests (must fail by assertion)"
+  if ( cd "$root" && cargo test --workspace >/dev/null 2>&1 ); then
+    fail "RED tests PASS with no production code — they exercise nothing"
+  fi
+  note "RED verified: compiles, fails by assertion"
+else
+  warn "cargo run skipped; fail-by-assertion not dynamically verified"
+fi
+
+exit 0
