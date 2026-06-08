@@ -5,7 +5,8 @@
 #   md-db       : built from vendored source in this repo (tools/md-db, AGPL-3.0).
 #
 # Both are built from source, so a working Rust toolchain is required:
-#   rustc/cargo >= 1.85 (the vendored md-db deps use the 2024 edition).
+#   rustc/cargo >= 1.95 (the vendored md-db's `kdl` dependency requires 1.95;
+#                        ctx-symbols alone builds on older toolchains).
 #   macOS:  brew install rust   ·   any:  https://rustup.rs
 #
 # Usage:  ./plugin/tools/install.sh [BIN_DIR]
@@ -17,7 +18,7 @@ BIN_DIR="${1:-$HOME/.local/bin}"
 mkdir -p "$BIN_DIR"
 
 command -v cargo >/dev/null 2>&1 || {
-  echo "ERROR: cargo not found. Install Rust (>=1.85): https://rustup.rs or 'brew install rust'." >&2
+  echo "ERROR: cargo not found. Install Rust (>=1.95): https://rustup.rs or 'brew install rust'." >&2
   exit 1
 }
 

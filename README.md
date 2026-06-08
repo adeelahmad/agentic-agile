@@ -32,7 +32,7 @@ block the stop and feed the failure reason back to the supervisor.
 
 ```bash
 # 1) Build + install the gate backends (ctx-symbols + md-db, both from source)
-#    requires a Rust toolchain >= 1.85 (rustup.rs or `brew install rust`)
+#    requires a Rust toolchain >= 1.95 (rustup.rs or `brew install rust`)
 ./plugin/tools/install.sh
 #    ensure ~/.local/bin (or ~/.cargo/bin) is on PATH
 
@@ -100,7 +100,7 @@ Full operator playbook: [`plugin/skills/agentic-agile/SKILL.md`](plugin/skills/a
 |------|-----------|---------|---------|
 | **ctx-symbols** | recommended | symbol uniqueness (`count==1`) + duplicate/orphan detection | `./plugin/tools/install.sh` (builds from `plugin/tools/ctx-symbols`) |
 | **md-db** | recommended | validates `.md` artifacts against `plugin/schemas/*.kdl` | `./plugin/tools/install.sh` (builds from vendored `plugin/tools/md-db`, AGPL-3.0) |
-| **Rust toolchain** | required to install | builds both backends; also runs the target repo's fmt/clippy/test/coverage matrix | rustup (>= 1.85) |
+| **Rust toolchain** | required to install | builds both backends; also runs the target repo's fmt/clippy/test/coverage matrix | rustup (>= 1.95) |
 
 Both backends are optional: absent → gates WARN and fall back to grep (never a false
 block, never a silent pass). See [`plugin/README.md`](plugin/README.md) for the gate
@@ -174,8 +174,7 @@ make publish        # pushes branch + tags
 Plugin implemented for a **Rust** target; gate bodies verified offline (positive +
 negative) against a sample one-story sprint. Before relying on it: smoke-test the
 hook wiring in a live Claude Code session (CI runs `plugin validate` but not a live
-session). Set the real `repository` URL in `plugin/.claude-plugin/plugin.json` when
-you create the public repo.
+session).
 
 ## License
 
