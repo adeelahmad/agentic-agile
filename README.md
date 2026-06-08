@@ -1,4 +1,22 @@
-# agentic-agile
+<div align="center">
+  
+  # 🤖 agentic-agile
+  
+  ### Agentic agile + autonomous TDD for Claude Code — AI coding agents that plan your sprint, then write the code with hook-enforced, deterministic gates.
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![CI](https://github.com/adeelahmad/agentic-agile/actions/workflows/ci.yml/badge.svg)](https://github.com/adeelahmad/agentic-agile/actions/workflows/ci.yml)
+  [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-D97757)](https://docs.anthropic.com/en/docs/claude-code)
+  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+  [![Stars](https://img.shields.io/github/stars/adeelahmad/agentic-agile?style=social)](https://github.com/adeelahmad/agentic-agile/stargazers)
+  
+  *Determinism comes from hooks, not model goodwill.*
+  
+  </div>
+  
+  ---
+  
+  # agentic-agile
 
 A Claude Code **plugin marketplace** containing the `agentic-agile` plugin:
 **two-stage agile planning** (interactive, human-gated) followed by **two-phase TDD
