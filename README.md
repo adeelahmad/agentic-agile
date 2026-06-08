@@ -13,7 +13,8 @@ block the stop and feed the failure reason back to the supervisor.
 ## Quick start
 
 ```bash
-# 1) Build + install the gate backends (ctx-symbols; tells you how to get md-db)
+# 1) Build + install the gate backends (ctx-symbols + md-db, both from source)
+#    requires a Rust toolchain >= 1.85 (rustup.rs or `brew install rust`)
 ./plugin/tools/install.sh
 #    ensure ~/.local/bin (or ~/.cargo/bin) is on PATH
 
@@ -48,8 +49,8 @@ Full operator playbook: [`plugin/skills/agentic-agile/SKILL.md`](plugin/skills/a
 | Tool | Required? | Purpose | Install |
 |------|-----------|---------|---------|
 | **ctx-symbols** | recommended | symbol uniqueness (`count==1`) + duplicate/orphan detection | `./plugin/tools/install.sh` (builds from `plugin/tools/ctx-symbols`) |
-| **md-db** | recommended | validates `.md` artifacts against `plugin/schemas/*.kdl` | external: `cargo install --path /path/to/md-db/crates/md-db-cli` |
-| **Rust toolchain** | for the gates | the target repo's fmt/clippy/test/coverage matrix | rustup |
+| **md-db** | recommended | validates `.md` artifacts against `plugin/schemas/*.kdl` | `./plugin/tools/install.sh` (builds from vendored `plugin/tools/md-db`, AGPL-3.0) |
+| **Rust toolchain** | required to install | builds both backends; also runs the target repo's fmt/clippy/test/coverage matrix | rustup (>= 1.85) |
 
 Both backends are optional: absent → gates WARN and fall back to grep (never a false
 block, never a silent pass). See [`plugin/README.md`](plugin/README.md) for the gate
@@ -71,7 +72,7 @@ DEVLOG.md                         build journal + review dispositions
 `make` (no target) prints all targets. Common ones:
 
 ```bash
-make install        # build + install ctx-symbols to ~/.local/bin (+ md-db guidance)
+make install        # build + install ctx-symbols and md-db to ~/.local/bin
 make link           # register THIS repo as a local marketplace and install the plugin
 make ci             # everything CI runs: fmt-check · lint · test
 make test           # ctx-symbols tests
@@ -125,3 +126,9 @@ you create the public repo.
 
 MIT — see [`LICENSE`](LICENSE). `ctx-symbols` is harvested from the MIT-licensed
 `ctxconfig` code-intelligence layer (see `plugin/tools/ctx-symbols/README.md`).
+
+`plugin/tools/md-db/` is **vendored third-party source under AGPL-3.0-or-later**
+([decisiongraph/md-db-rs](https://github.com/decisiongraph/md-db-rs)), kept under its
+own [`LICENSE`](plugin/tools/md-db/LICENSE). It is built into a standalone `md-db`
+binary the gates shell out to — the MIT plugin code links to none of it — but anyone
+redistributing this repository must honor AGPL-3.0 terms for that subtree.

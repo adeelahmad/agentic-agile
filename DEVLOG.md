@@ -40,9 +40,24 @@ Build the `agentic-agile` Claude Code plugin from the DESIGN package.
   absent → WARN+fallback (never a false block, never a silent pass).
 
 ### Watch Out
-- `md-db` is NOT installed in this env → all md-db checks run in WARN+fallback mode.
-  Install `md-db` for full artifact validation.
+- `md-db` is now **vendored** at `plugin/tools/md-db/` (AGPL-3.0) and built by
+  `install.sh`; no longer an external prereq. `make install` builds both backends.
+- Build now needs **Rust >= 1.85** (vendored md-db deps use edition 2024). Local
+  toolchain upgraded 1.77.2 → 1.96.0 (Homebrew) this session.
 - ctx-symbols must be on the hook's PATH (`~/.local/bin` or `~/.cargo/bin`).
+
+---
+
+### Session 2 — 2026-06-08: Vendor md-db so `make install` is self-contained
+**What:** `make install` failed (cargo 1.77 couldn't read a v4 Cargo.lock; md-db was an
+unbuildable external prereq). Vendored `decisiongraph/md-db-rs` into `plugin/tools/md-db/`
+(AGPL-3.0, own LICENSE), wired `install.sh` + `Makefile` to build+install it from source.
+Upgraded Rust 1.77.2→1.96.0 (vendored deps need edition 2024); pinning to MSRV 1.77 was
+whack-a-mole, so upgrade was the durable fix. All 4 plugin KDL schemas parse + validate
+under the vendored binary; md-db unit tests green; shellcheck/json clean.
+**Files:** plugin/tools/md-db/ (new, vendored), plugin/tools/install.sh, Makefile,
+README.md, plugin/README.md.
+**License note:** repo is MIT + one vendored AGPL-3.0 subtree (disclosed in README).
 - Gate diff-scope uses the working tree unless `BASE_REF` is set; the supervisor should
   set `BASE_REF`, `SCOPE_GLOBS`, `TEST_GLOBS`, `SCAFFOLD_SYMBOLS`, `STANDARDS_FILE`,
   `ATTEMPT_DIR`, `REPO_DIR` per dispatch (contract documented in `bin/_gatelib.sh`).

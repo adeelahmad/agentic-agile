@@ -8,6 +8,7 @@ PLUGIN       := agentic-agile
 MARKET       := agentic-agile-marketplace
 PLUGIN_DIR   := plugin
 CTX          := plugin/tools/ctx-symbols
+MDDB         := plugin/tools/md-db
 BIN_DIR      ?= $(HOME)/.local/bin
 REPO         := $(CURDIR)
 VERSION      := $(shell python3 -c "import json;print(json.load(open('plugin/.claude-plugin/plugin.json'))['version'])")
@@ -27,11 +28,12 @@ help: ## Show this help
 
 # ── Build / install ────────────────────────────────────────────────
 .PHONY: build
-build: ## Build ctx-symbols (release)
+build: ## Build ctx-symbols + md-db (release)
 	cd $(CTX) && cargo build --release
+	cd $(MDDB) && cargo build --release
 
 .PHONY: install
-install: ## Build + install ctx-symbols to BIN_DIR (and md-db guidance)
+install: ## Build + install ctx-symbols and md-db to BIN_DIR
 	./plugin/tools/install.sh "$(BIN_DIR)"
 
 .PHONY: link
