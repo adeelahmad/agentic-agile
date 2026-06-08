@@ -56,11 +56,14 @@ reacts to gate verdicts. Two ways to start it inside Claude Code:
   Plan and implement the CSV export feature — tests first, with gates.
   ```
 
-- **Explicitly**, via the namespaced slash command:
+- **Explicitly**, via the namespaced entry-point command:
 
   ```
-  /agentic-agile:agentic-agile
+  /agentic-agile:init
   ```
+
+  (`init` is a thin alias that loads the same supervisor playbook; the underlying
+  skill is also directly invokable as `/agentic-agile:agentic-agile`.)
 
 Once started:
 

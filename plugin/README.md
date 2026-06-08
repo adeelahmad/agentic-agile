@@ -54,7 +54,8 @@ gates; you don't call them directly. Start it either way:
 - **Implicitly** — it's model-invoked, so asking to build/ship/implement/fix something
   via a sprint or TDD auto-triggers it (e.g. *"build a rate limiter as a sprint, tests
   first"*).
-- **Explicitly** — `/agentic-agile:agentic-agile`.
+- **Explicitly** — `/agentic-agile:init` (a thin entry-point alias; the underlying
+  skill is also directly invokable as `/agentic-agile:agentic-agile`).
 
 Planning is human-gated: the skill stops for your Stage-2 approval before it begins the
 autonomous RED → SCAFFOLD → GREEN → STRUCTURAL → FINAL execution run.

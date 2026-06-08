@@ -48,6 +48,20 @@ Build the `agentic-agile` Claude Code plugin from the DESIGN package.
 
 ---
 
+### Session 5 — 2026-06-08: `/agentic-agile:init` entry-point skill (v0.3.0)
+**What:** Added a second skill `plugin/skills/init/` so the workflow has a clean
+explicit command, `/agentic-agile:init`. It's a thin pointer (`disable-model-invocation:
+true`) that directs the supervisor to the canonical `agentic-agile` playbook — no
+content duplication, no symlink/duplicate-name risk. The main skill still auto-triggers.
+Bumped 0.2.1 → 0.3.0 (new skill = MINOR). **Lesson reconfirmed:** the version-keyed
+plugin cache won't refresh on the same version string — the local-path reinstall kept
+serving the stale 0.2.1 cache (only the old skill) until the bump; after 0.3.0 the cache
+carried both skills. Verified install loads enabled with `agentic-agile` + `init`.
+**Files:** plugin/skills/init/SKILL.md (new), plugin/.claude-plugin/plugin.json,
+plugin/tools/ctx-symbols/Cargo.toml, CHANGELOG.md, README.md, plugin/README.md.
+
+---
+
 ### Session 4 — 2026-06-08: Marketplace compliance review + publish v0.2.1
 **What:** Audited against the Claude Code marketplace/plugin docs. `claude plugin
 validate` (v2.1.168) passed the plugin clean and the marketplace with one warning

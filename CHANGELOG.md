@@ -20,6 +20,14 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.3.0] - 2026-06-08
+
+### Added
+- **`init` entry-point skill** (`plugin/skills/init/`): a thin, explicit-only alias
+  (`disable-model-invocation: true`) invoked as `/agentic-agile:init`. It points at the
+  canonical `agentic-agile` playbook rather than duplicating it, so the two never drift.
+  The main `agentic-agile` skill still auto-triggers on natural-language build/TDD asks.
+
 ## [0.2.1] - 2026-06-08
 
 ### Fixed
