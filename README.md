@@ -138,8 +138,9 @@ make publish        # push branch + tags to origin
 
 Git hooks (opt in with `make hooks`): **pre-commit** runs `fmt-check · json ·
 eval-validate · version-check` (fast, no tokens); **pre-push** runs the full
-`make ci` (`fmt-check · lint · test · eval-validate`). Bypass either with
-`SKIP_HOOKS=1` (e.g. `SKIP_HOOKS=1 git commit …`), or git's own `--no-verify`.
+`make ci` (`fmt-check · lint · test · eval-validate`). Bypass with `SKIP_HOOKS=1`
+(e.g. `SKIP_HOOKS=1 git commit …`) for an intentional WIP commit or a known-failing
+local dependency.
 
 ## Versioning & changelog
 
