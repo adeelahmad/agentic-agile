@@ -21,7 +21,7 @@ See `skills/agentic-agile/SKILL.md` for the full supervisor playbook and
 |------|-----------|--------------|---------|
 | **ctx-symbols** | recommended | symbol uniqueness (`count==1`) + duplicate/parallel/orphan detection for the scaffold & structural gates | built from `tools/ctx-symbols` (see below) |
 | **md-db** | recommended | validates `.md` artifacts against `schemas/*.kdl` | built from vendored `tools/md-db` (AGPL-3.0; see below) |
-| **Rust toolchain** | required to install | builds both backends + runs the target repo's `cargo fmt/clippy/test/coverage` matrix | rustup (>= 1.85) |
+| **Rust toolchain** | required to install | builds both backends + runs the target repo's `cargo fmt/clippy/test/coverage` matrix | rustup (>= 1.95) |
 
 Both backends are **optional**: if absent, the gates WARN and fall back to grep —
 they never falsely block and never silently pass a real check. A run with WARNs has
@@ -31,7 +31,7 @@ they never falsely block and never silently pass a real check. A run with WARNs 
 
 ```bash
 ./tools/install.sh            # builds + installs ctx-symbols AND md-db to ~/.local/bin
-                              # (both from source; needs a Rust toolchain >= 1.85)
+                              # (both from source; needs a Rust toolchain >= 1.95)
 # ensure ~/.local/bin (or ~/.cargo/bin) is on PATH
 ```
 
