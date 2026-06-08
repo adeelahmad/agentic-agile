@@ -74,8 +74,9 @@ json: ## Validate plugin.json + marketplace.json
 lint: clippy shellcheck json ## Run all linters
 
 .PHONY: test
-test: ## Run ctx-symbols tests
+test: ## Run ctx-symbols + md-db unit tests
 	cd $(CTX) && cargo test --all-targets
+	cd $(MDDB) && cargo test --release
 
 .PHONY: validate
 validate: json ## claude plugin validate --strict
@@ -83,7 +84,7 @@ validate: json ## claude plugin validate --strict
 	claude plugin validate ./plugin --strict
 
 .PHONY: ci
-ci: fmt-check lint test ## Run everything CI runs (except the live claude install)
+ci: fmt-check lint test eval-validate ## Run everything CI runs (except the live claude install)
 
 # ── Evals ──────────────────────────────────────────────────────────
 .PHONY: eval-validate

@@ -92,10 +92,12 @@ DEVLOG.md                         build journal + review dispositions
 ```bash
 make install        # build + install ctx-symbols and md-db to ~/.local/bin
 make link           # register THIS repo as a local marketplace and install the plugin
-make ci             # everything CI runs: fmt-check · lint · test
-make test           # ctx-symbols tests
+make ci             # everything CI runs: fmt-check · lint · test · eval-validate
+make test           # ctx-symbols + md-db unit tests
 make lint           # clippy -D warnings + shellcheck + JSON sanity
 make validate       # claude plugin validate ./plugin --strict
+make eval-validate  # validate every eval suite's JSON (no tokens)
+make eval SUITE=…   # run one eval suite live (YES=1 spends tokens; see scripts/eval/)
 make hooks          # install the tracked git hooks (.githooks → core.hooksPath)
 make smoke          # offline gate smoke test
 make release        # verify (ci+validate+version-check) then tag vX.Y.Z
