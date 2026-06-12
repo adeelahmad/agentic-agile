@@ -100,15 +100,15 @@ pipeline/                    design source of truth (persona/init/artifacts/gate
 
 MIT — see `LICENSE`.
 
-## Lineage & memory (v0.2)
+## Transcripts & memory (v0.2)
 
-- `bin/lineage` keeps a global append-only `lineage.jsonl` + per-task transcripts.
-  `SubagentStart` stages a READ-ONLY task slice into the worktree (`.lineage/`),
+- `bin/transcripts` keeps a global append-only `global.jsonl` + per-task transcripts.
+  `SubagentStart` stages a READ-ONLY task slice into the worktree (`.transcripts/`),
   `PostToolUse *` records every call, `SubagentStop *` removes the slice. These hooks
   never block. The supervisor reads the global store; the planning **retrospective**
   (the `archivist`) distills it into `docs/agents/memory.md`, which is injected
   (role-scoped) into each `init.md` `# Memory` section.
 - The gates read their per-task contract (`TASK_ID`, `SCOPE_GLOBS`, `SCAFFOLD_SYMBOLS`,
-  `BASE_REF`, `AGENTIC_LINEAGE_DIR`) from `.agentic/task.env`, written by the supervisor
-  into each worktree at dispatch. `.agentic/` and `.lineage/` are git-ignored and never
+  `BASE_REF`, `AGENTIC_TRANSCRIPTS_DIR`) from `.agentic/task.env`, written by the supervisor
+  into each worktree at dispatch. `.agentic/` and `.transcripts/` are git-ignored and never
   merged.

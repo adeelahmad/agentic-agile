@@ -32,7 +32,7 @@ repo_dir() {
 
 # Per-worktree task contract the supervisor writes at dispatch (.agentic/task.env):
 # TASK_ID, ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF, ATTEMPT_DIR,
-# AGENTIC_LINEAGE_DIR. Real env still overrides (load is non-clobbering only for unset).
+# AGENTIC_TRANSCRIPTS_DIR. Real env still overrides (load is non-clobbering only for unset).
 load_task_env() {
   local te; te="$(repo_dir)/.agentic/task.env"
   [ -f "$te" ] || return 0

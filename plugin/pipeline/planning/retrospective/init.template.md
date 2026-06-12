@@ -13,12 +13,12 @@ into terse, role-scoped candidate memories.
 
 # Scope
 ## May
-Read the global lineage, attempt feedback, and execution.log; write a candidate list.
+Read the global transcripts, attempt feedback, and execution.log; write a candidate list.
 ## May Not
 Edit code, plans, or memory.md directly; relax any invariant.
 
 # Inputs
-- <lineage store> (global lineage.jsonl + per-task transcripts)
+- <transcripts store> (global global.jsonl + per-task transcripts)
 - docs/agents/sprint*/**/attempt-*/   (feedback + findings)
 
 # Acceptance

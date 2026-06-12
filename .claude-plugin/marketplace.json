@@ -6,7 +6,7 @@
     {
       "name": "agentic-agile",
       "source": "./plugin",
-      "description": "Two-stage planning + two-phase TDD execution with deterministic hook gates, per-task lineage, and a memory-producing retrospective."
+      "description": "Two-stage planning + two-phase TDD execution with deterministic hook gates, per-task transcripts, and a memory-producing retrospective."
     }
   ]
 }

@@ -307,7 +307,7 @@ human-bounded (no machine budget needed).
 ## 13. Retrospective + memory (every planning session)
 
 Every planning session opens with a retrospective (the `archivist`, read-only). It
-reads the global lineage + the failure/feedback trail since the last session and
+reads the global transcripts + the failure/feedback trail since the last session and
 distills RECURRING patterns (>=2) — failures and reliably-good moves — into terse,
 role-scoped one/two-line entries. The human is present and adds their own insights
 (continuous-failure guidance). Kept entries land in `docs/agents/memory.md`
@@ -316,15 +316,19 @@ role-scoped one/two-line entries. The human is present and adds their own insigh
 invariant (no-suppression, human-only-planning, scaffolder-leaves-panic, the gates);
 patterns not one-offs; bounded + deduped.
 
-## 14. Lineage (task-scoped, file-based)
+## 14. Transcripts (task-scoped, file-based)
 
-A global append-only `lineage.jsonl` plus per-task transcripts (no FUSE). At
-`SubagentStart` the supervisor's `bin/lineage stage-in` copies the task's transcript
-into the worktree as a READ-ONLY slice (`.lineage/`); `PostToolUse *` records every
-tool call (`lineage record`); `SubagentStop *` removes the slice (`stage-out`). The
-canonical store lives outside the tracked tree (`.agentic/lineage`, git-ignored) so it
-never rides a code merge; only that task's lineage is folded into its home. Real
+A global append-only `global.jsonl`, plus per-task `events.jsonl` (the full hook
+payload per tool call + every user prompt) and `transcript.jsonl` (the complete session
+snapshot — every message and thinking block — copied from the session's `transcript_path`
+on stop). No FUSE. At `SubagentStart` the supervisor's `bin/transcripts stage-in` copies
+the task's slice into the worktree as READ-ONLY (`.transcripts/`); `UserPromptSubmit`
+records prompts; `PostToolUse *` records the full tool payload (`transcripts record`);
+`Stop`/`SubagentStop *` snapshot the full transcript and remove the slice (`transcripts
+stop`). The canonical store lives outside the tracked tree (`.agentic/transcripts`,
+git-ignored) so it never rides a code merge; only that task's transcripts are folded into
+its home. Everything is kept (no auto-compaction; `prune` is manual). Real
 isolation = the global file is never staged into the worktree; the read-only chmod is
 the softer "not yours to write" signal. The gates read their per-task contract from
-`.agentic/task.env`. Lineage subsumes the verdict/decision/worktree-event gaps and
+`.agentic/task.env`. Transcripts subsumes the verdict/decision/worktree-event gaps and
 feeds the retrospective.

@@ -1,6 +1,6 @@
-# lineage store + per-worktree control dir (never tracked, never merged)
+# transcript store + per-worktree control dir (never tracked, never merged)
 .agentic/
-.lineage/
+.transcripts/
 # rust build
 target/
 # generated eval runs (only the evals.json suites are tracked)

@@ -25,5 +25,5 @@ restate the playbook; it points at the canonical one so the two never drift.
    autonomous RED → SCAFFOLD → GREEN → STRUCTURAL-REVIEW → FINAL-GATE execution run
    until the human approves the completed Stage-2 plan.**
 
-Everything else — the gate contract, artifact layout, lineage, retrospective — is
+Everything else — the gate contract, artifact layout, transcripts, retrospective — is
 defined in `agentic-agile/SKILL.md`. Follow it as written.

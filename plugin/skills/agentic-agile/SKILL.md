@@ -6,9 +6,13 @@ description: >-
   then autonomous two-phase TDD execution: the supervisor drives planning with the
   human, then dispatches one worktree-isolated sub-agent per task through
   RED → SCAFFOLD → GREEN → STRUCTURAL-REVIEW → FINAL-GATE, with md-db/ctx-symbols
-  validation, per-task lineage, and a retrospective that distills memory. Trigger
-  when asked to build, ship, implement, add a feature, or fix via sprints, stories,
-  or TDD/orchestration — even if "agile" is never said.
+  validation, per-task transcript capture, and a retrospective that distills memory. Trigger
+  when asked to build, ship, implement, add, change, improve, redesign, polish, fix, or
+  repair anything — INCLUDING terse or visual requests like "improve the UI", "it's
+  broken", "add facets/filters", "make it nicer", or a screenshot with a complaint — via
+  sprints, stories, or TDD/orchestration, even if "agile" is never said. A fresh
+  build/fix/improve request that arrives mid-session is NEW SCOPE: it re-enters this
+  skill's planning (a new sprint or new stories), never ad-hoc hand-editing.
 ---
 
 # agentic-agile — the supervisor's playbook
@@ -32,6 +36,14 @@ doc). It folds the structural-review corrections directly into the process.
 
 ## Hard guardrails (never violate)
 
+- **A new build/fix/improve request is new SCOPE — plan it, don't just do it.** When a
+  fresh request arrives while this skill is active — including mid-session, including a
+  terse one-liner or a screenshot with a complaint ("improve the UI", "it's broken",
+  "add facets/filters", "make it nicer", "redesign X") — it is NOT a cue to start
+  hand-editing code. It re-enters the pipeline: open a new sprint (or add stories to the
+  current one) and run intake → planner before any RED. Silently switching into ad-hoc
+  implementation is the bypass this skill exists to prevent. "Improve X" and "fix the
+  broken Y" are sprint triggers, not invitations to edit files directly.
 - The human is absent from execution. Never block waiting for human input mid-run.
 - **You own all planning artifacts.** Sub-agents NEVER edit `stories.md`,
   `tasks.md`, `validate.md`, `plan.md`, `plan-ready.md`, or `sprintN/plan.md`.
@@ -82,7 +94,7 @@ Every session opens with a **retrospective**, then **intake → standards → pl
 artifacts under `docs/agents/sprintN/`.
 
 ## Prerequisites
-- A POSIX shell + git with worktrees. The gates and `bin/lineage` are bash.
+- A POSIX shell + git with worktrees. The gates and `bin/transcripts` are bash.
 - `md-db` on PATH (optional) — validates `.md` artifacts against `schemas/*.kdl`;
   absent → grep fallback.
 - `ctx-symbols` on PATH (optional) — symbol uniqueness/duplication; absent → grep fallback.
@@ -93,7 +105,7 @@ A gate NEVER hard-fails on a missing backend — it WARNs and falls back. Never 
 ## Step 0 — retrospective + memory (every session, human present)
 
 Before intake, run the retrospective (dispatch `archivist`, read-only, or do it
-yourself): read the GLOBAL lineage + the failure/feedback trail since last time and
+yourself): read the GLOBAL transcript stream + the failure/feedback trail since last time and
 draft terse, role-scoped lessons from RECURRING patterns (>= 2) — failures AND
 reliably-good moves. The human curates and adds their own continuous-failure
 insights. Kept entries (1-2 lines each) go into `docs/agents/memory.md` (schema:
@@ -199,7 +211,7 @@ sub-agent = one task. Every dispatch uses `isolation: "worktree"`.
 ```
 docs/agents/
   memory.md                                      (you + human, at each retrospective)
-  .agentic/lineage/  lineage.jsonl + transcripts/<task>/   (global; git-ignored, never merged)
+  .agentic/transcripts/  global.jsonl + <task>/{events,transcript}.jsonl  (git-ignored, never merged)
   sprintN/
     stories.md plan.md intake.md standards.md    (you / planning activities)
     execution.log                                (you, via bin/log-execution)
@@ -215,9 +227,9 @@ docs/agents/
 per worktree (transient, git-ignored, removed on stop):
   .agentic/task.env        the per-task contract you write at dispatch (TASK_ID,
                            ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF,
-                           AGENTIC_LINEAGE_DIR) — the gates read this
+                           AGENTIC_TRANSCRIPTS_DIR) — the gates read this
   .agentic/scaffold-symbols  scaffolder-written production-symbol list (scaffold gate)
-  .lineage/                READ-ONLY task transcript staged in for the worker
+  .transcripts/            READ-ONLY task transcript staged in for the worker
 ```
 
 ### Writer rules (who writes what)
@@ -229,7 +241,7 @@ per worktree (transient, git-ignored, removed on stop):
   it. It POINTS at `plan-ready.md`; it never copies the spec. Inject a `# Memory`
   section = the `memory.md` entries tagged for this role or `all` (top ~7 by
   recurrence/recency). At dispatch you also write the worktree's `.agentic/task.env`
-  (the gate contract) and `bin/lineage stage-in` stages the read-only `.lineage/`.
+  (the gate contract) and `bin/transcripts stage-in` stages the read-only `.transcripts/`.
 - `output.md` — the **worker** writes it: `# Summary`, a `# Result` table
   (per-check Check/Status/Detail), `# Findings`, `# Next`, plus `status` and
   `diff_files`. A **fresh `output.md` per attempt dir** (no append race).
@@ -427,13 +439,13 @@ source of truth the gate uses, so first-pass blocks become rare.
   ctx-symbols are on PATH (SubagentStart hook + manual pre-dispatch check).
 - `bin/gate-supervisor-scope` — PreToolUse guard; blocks the supervisor from writing
   production source while a sprint is live this session (code goes through workers).
-- `bin/lineage …` — task-scoped lineage (managed by hooks; `lineage --help`).
+- `bin/transcripts …` — full interaction capture (managed by hooks; `transcripts --help`).
 - `bin/<gate>` — the individual gates (hook-invoked; see `bin/README.md` for each
   gate, its event/matcher, and exit codes).
 - `md-db validate … --schema schemas/*.kdl` — validate any `.md` artifact you write.
 
 ================================================================================
-# PART C — MEMORY & LINEAGE (the learning + audit loop)
+# PART C — MEMORY & TRANSCRIPTS (the learning + audit loop)
 
 ## memory.md (cross-sprint learning)
 - Lives at `docs/agents/memory.md` (schema: `schemas/memory.kdl`), curated at every
@@ -443,25 +455,35 @@ source of truth the gate uses, so first-pass blocks become rare.
 - Memories are advisory; they never override the playbook or relax a gate. Discard any
   candidate that would (e.g. "skip the flaky test" → instead "fix the flakiness").
 
-## Lineage (task-scoped, file-based — bin/lineage)
-- Global append-only `docs/agents/.agentic/lineage/lineage.jsonl` + per-task
-  `transcripts/<task>/`. Git-ignored, never merged. You read the GLOBAL stream; a
-  sub-agent only ever sees its own task slice.
+## Transcripts (full capture, file-based — bin/transcripts)
+- Store at `docs/agents/.agentic/transcripts/` (git-ignored, never merged):
+  - `global.jsonl` — thin cross-task causal stream (tool/file/prompt/stop markers) the
+    retrospective scans without reading every payload.
+  - `<task>/events.jsonl` — the FULL hook payload per tool call (tool_input +
+    tool_response) + every user prompt. Nothing is dropped.
+  - `<task>/transcript.jsonl` — the complete session snapshot (every user/assistant
+    message + thinking + tool result), copied from the session's `transcript_path` on
+    each stop. The main (supervisor) session lands under `<task>=session`.
+  You read the GLOBAL stream + any task's full record; a sub-agent only ever sees its
+  own task slice.
 - Lifecycle (wired in hooks.json, all non-blocking — exit 0):
-    SubagentStart → `lineage stage-in`   copy this task's transcript into the worktree
-        as READ-ONLY `.lineage/` (a frozen pre-run snapshot).
-    PostToolUse *  → `lineage record`    append every tool call to the canonical store
-        (NOT into the read-only copy).
-    SubagentStop * → `lineage stage-out`  remove `.lineage/`; log a stop marker.
-- Real isolation = the global file is never staged into the worktree. The read-only
+    UserPromptSubmit → `transcripts prompt`   capture each human message.
+    SubagentStart    → `transcripts stage-in` copy this task's slice into the worktree
+        as READ-ONLY `.transcripts/` (a frozen pre-run snapshot).
+    PostToolUse *    → `transcripts record`   append the full tool payload to the store.
+    Stop             → `transcripts snapshot`  snapshot the full session transcript.
+    SubagentStop *   → `transcripts stop`      snapshot + remove `.transcripts/` + marker.
+- Real isolation = the global store is never staged into the worktree. The read-only
   chmod is the softer "not yours to write" signal (defeatable, but it errors loudly).
-- The retrospective reads this stream to distill memory. Gate verdicts, supervisor
-  decisions, and worktree create/merge/abandon are all lineage events.
+- Retention: everything is kept (no auto-compaction). `transcripts prune` is a manual,
+  opt-in cap (`AGENTIC_TRANSCRIPTS_KEEP=<n>`) if disk gets tight.
+- The retrospective reads this to distill memory. Gate verdicts, supervisor decisions,
+  and worktree create/merge/abandon are all captured here.
 
 ## The per-worktree contract (.agentic/task.env)
 At dispatch, write `.agentic/task.env` into the worktree with `TASK_ID`, `ATTEMPT`,
 `AGENT_ROLE`, `SCOPE_GLOBS` (GREEN diff-scope), `SCAFFOLD_SYMBOLS` (or write
-`.agentic/scaffold-symbols`), `BASE_REF` (diff base), and `AGENTIC_LINEAGE_DIR`. The gate
+`.agentic/scaffold-symbols`), `BASE_REF` (diff base), and `AGENTIC_TRANSCRIPTS_DIR`. The gate
 library sources it, so the gates check the RIGHT task's scope/symbols — not
 auto-discovered guesses.
 

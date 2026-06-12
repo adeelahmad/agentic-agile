@@ -7,12 +7,12 @@ never calls them directly. Shared helpers live in `_gatelib.sh`.
 - `0`  PASS (allow the event)
 - `2`  BLOCK the event + write the reason to stderr (fed back to the supervisor)
 - other non-zero  error
-Lineage hooks (`lineage`) ALWAYS exit `0` — they must never block an agent.
+Transcripts hooks (`transcripts`) ALWAYS exit `0` — they must never block an agent.
 
 ## Per-task contract
 Gates read `.agentic/task.env` (the supervisor writes it into each worktree at
 dispatch): `TASK_ID, ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF,
-ATTEMPT_DIR, AGENTIC_LINEAGE_DIR`. Real env overrides. A missing backend (md-db /
+ATTEMPT_DIR, AGENTIC_TRANSCRIPTS_DIR`. Real env overrides. A missing backend (md-db /
 ctx-symbols) → WARN + grep fallback; never a silent pass.
 
 ## Gates (which hook fires each)
@@ -34,7 +34,7 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 ## Tools
 | script | purpose |
 |--------|---------|
-| `lineage`       | task-scoped lineage: stage-in / record / stage-out / view / compact (`lineage --help`) |
+| `transcripts`       | full capture: stage-in / record / prompt / snapshot / stop / view / prune (`transcripts --help`) |
 | `log-execution` | append a transition line to `execution.log` |
 
 ## v0.2 — self-check at every step

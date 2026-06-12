@@ -4,17 +4,25 @@
       { "matcher": "Write|Edit|MultiEdit|NotebookEdit", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-supervisor-scope" } ] }
     ],
+    "UserPromptSubmit": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts prompt" } ] }
+    ],
     "SubagentStart": [
       { "matcher": "red-worker|scaffolder|green-worker|structural-reviewer|final-gate", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-tooling" } ] },
       { "matcher": "*", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/lineage stage-in" } ] }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts stage-in" } ] }
     ],
     "PostToolUse": [
       { "matcher": "Write", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-validate-artifact" } ] },
       { "matcher": "*", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/lineage record" } ] }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts record" } ] }
+    ],
+    "Stop": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts snapshot" } ] }
     ],
     "SubagentStop": [
       { "matcher": "intake", "hooks": [
@@ -36,7 +44,7 @@
       { "matcher": "final-gate", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-final" } ] },
       { "matcher": "*", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/lineage stage-out" } ] }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts stop" } ] }
     ]
   }
 }

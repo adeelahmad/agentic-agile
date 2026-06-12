@@ -20,6 +20,32 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.5.0] - 2026-06-12
+
+### Changed
+- **Sprint-entry discipline.** A fresh build/fix/improve request mid-session was being
+  treated as "just do the work" instead of opening a new sprint/stories. Broadened the
+  skill trigger `description` to fire on terse/visual requests (improve/redesign/polish,
+  "the UI is broken", "add facets/filters", a screenshot with a complaint), and added a
+  Hard-guardrail: a new build/fix/improve request is NEW SCOPE — re-enter intake →
+  planner, never switch into ad-hoc hand-editing.
+- **Renamed `lineage` → `transcripts`, and it now records EVERYTHING.** The old
+  `bin/lineage` captured only `tool_name` + `file_path` per event — not a transcript.
+  Replaced by `bin/transcripts`, which captures:
+  - `<task>/events.jsonl` — the FULL hook payload per tool call (tool_input +
+    tool_response) plus every user prompt (new `UserPromptSubmit` hook).
+  - `<task>/transcript.jsonl` — the complete session snapshot (every user/assistant
+    message + thinking + tool result), copied from the session's `transcript_path` on
+    each stop (new `Stop` hook + `SubagentStop`).
+  - `global.jsonl` — a thin cross-task causal stream for the retrospective to scan.
+  Retention keeps everything (no auto-compaction); `transcripts prune`
+  (`AGENTIC_TRANSCRIPTS_KEEP`) is a manual, opt-in cap.
+  Renamed throughout: the `bin/lineage`→`bin/transcripts` script, the
+  `AGENTIC_LINEAGE_DIR`→`AGENTIC_TRANSCRIPTS_DIR` task.env var, the `.lineage/`→
+  `.transcripts/` worktree slice, the store dir, hook wiring, schemas-adjacent docs,
+  SKILL.md Part C, README/STRUCTURE/ARCHITECTURE/DESIGN, and the archivist
+  agent/eval. No back-compat shim.
+
 ## [0.4.0] - 2026-06-12
 
 ### Fixed

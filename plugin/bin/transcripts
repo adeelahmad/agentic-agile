@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# transcripts — full interaction capture for agentic-agile (file-based, never blocks).
+#
+# Records EVERYTHING that flows through the hooks — not a thin event log:
+#   <store>/<task>/events.jsonl      live stream: the FULL hook payload per tool call
+#                                    (tool_input + tool_response) + every user prompt
+#   <store>/<task>/transcript.jsonl  complete session snapshot — every user/assistant
+#                                    message, thinking block, tool call + result — copied
+#                                    from the session's transcript_path on each stop
+#   <store>/global.jsonl             thin cross-task causal stream (for the retrospective
+#                                    to scan without reading every full payload)
+# Sub-agents get a READ-ONLY slice staged into their worktree (./.transcripts); the
+# supervisor reads the global store. These hooks NEVER block (always exit 0) — capture
+# must not stop work. Retention: keep everything (no auto-compaction); `prune` is manual.
+#
+#   transcripts init                  ensure the store exists
+#   transcripts stage-in              copy this task's slice -> ./.transcripts (read-only)  [SubagentStart]
+#   transcripts record                append the FULL tool-call payload (stdin JSON)        [PostToolUse *]
+#   transcripts prompt                append a user prompt (stdin JSON)                      [UserPromptSubmit]
+#   transcripts snapshot              copy the full session transcript (stdin JSON)         [Stop]
+#   transcripts stop                  snapshot + remove ./.transcripts + stop marker        [SubagentStop *]
+#   transcripts view --all|--task ID  read the store (supervisor)
+#   transcripts prune                 manual: keep last N events/task (AGENTIC_TRANSCRIPTS_KEEP, default all)
+#
+# Per-worktree contract: the supervisor writes ./.agentic/task.env at dispatch with
+#   TASK_ID, ATTEMPT, AGENT_ROLE, AGENTIC_TRANSCRIPTS_DIR  (real env overrides it).
+set -uo pipefail
+
+WT="${AGENTIC_WORKTREE:-$PWD}"
+[ -f "$WT/.agentic/task.env" ] && { set -a; . "$WT/.agentic/task.env"; set +a; }
+TASK_ID="${TASK_ID:-session}"
+STORE="${AGENTIC_TRANSCRIPTS_DIR:-$WT/.agentic/transcripts}"
+VIEW="$WT/.transcripts"
+GLOBAL="$STORE/global.jsonl"
+TDIR="$STORE/$TASK_ID"
+
+ts() { date -u +%FT%TZ; }
+ensure() { mkdir -p "$STORE/compacted" "$TDIR" 2>/dev/null || true; }
+
+# Best-effort extraction of a top-level JSON string field (paths / ids).
+jstr() { printf '%s' "$1" | sed -nE "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/p" | head -1; }
+
+# Append one JSONL event wrapping the raw payload + an envelope (ts/task/attempt/agent/
+# kind). Uses python3 to compact arbitrary (possibly pretty-printed) JSON to one line;
+# falls back to newline-flattening if python3 is absent. Never fails the hook.
+emit_event() { # $1 kind, $2 payload
+  local kind="$1" payload="$2" line=""
+  if command -v python3 >/dev/null 2>&1; then
+    line="$(printf '%s' "$payload" | TS="$(ts)" TASK="$TASK_ID" ATT="${ATTEMPT:-}" AG="${AGENT_ROLE:-}" KIND="$kind" python3 -c '
+import json, sys, os
+raw = sys.stdin.read()
+try: p = json.loads(raw)
+except Exception: p = {"raw": raw}
+print(json.dumps({"ts": os.environ["TS"], "task": os.environ["TASK"],
+                  "attempt": os.environ["ATT"], "agent": os.environ["AG"],
+                  "kind": os.environ["KIND"], "payload": p}, ensure_ascii=False))
+' 2>/dev/null)"
+  fi
+  if [ -z "$line" ]; then
+    line="$(printf '{"ts":"%s","task":"%s","attempt":"%s","agent":"%s","kind":"%s","payload":%s}' \
+      "$(ts)" "$TASK_ID" "${ATTEMPT:-}" "${AGENT_ROLE:-}" "$kind" "$(printf '%s' "$payload" | tr '\n' ' ')")"
+  fi
+  printf '%s\n' "$line" >> "$TDIR/events.jsonl" 2>/dev/null || true
+}
+
+emit_global() { printf '%s\n' "$1" >> "$GLOBAL" 2>/dev/null || true; }
+
+# Copy the full session transcript JSONL (every message) into <task>/transcript.jsonl.
+snapshot_transcript() { # $1 payload
+  local tp; tp="$(jstr "$1" transcript_path)"
+  [ -n "$tp" ] && [ -f "$tp" ] && cp "$tp" "$TDIR/transcript.jsonl" 2>/dev/null || true
+}
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  -h|--help|help)
+    sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+
+  init) ensure; echo "transcripts store: $STORE" ;;
+
+  stage-in)
+    ensure
+    rm -rf "$VIEW" 2>/dev/null || true; mkdir -p "$VIEW" 2>/dev/null || true
+    if [ -d "$TDIR" ] && [ -n "$(ls -A "$TDIR" 2>/dev/null)" ]; then
+      cp -R "$TDIR/." "$VIEW/" 2>/dev/null || true
+    else
+      printf '# task %s — no prior transcript yet\n' "$TASK_ID" > "$VIEW/transcript.md" 2>/dev/null || true
+    fi
+    printf 'READ-ONLY. Your task transcript. You cannot write here (by design).\n' > "$VIEW/README" 2>/dev/null || true
+    chmod -R a-w "$VIEW" 2>/dev/null || true
+    exit 0 ;;
+
+  record)
+    ensure
+    payload="$(cat 2>/dev/null || true)"
+    emit_event tool "$payload"
+    tool="$(jstr "$payload" tool_name)"; file="$(jstr "$payload" file_path)"
+    emit_global "$(printf '{"ts":"%s","task":"%s","attempt":"%s","agent":"%s","tool":"%s","file":"%s"}' \
+                   "$(ts)" "$TASK_ID" "${ATTEMPT:-}" "${AGENT_ROLE:-}" "${tool:-}" "${file:-}")"
+    exit 0 ;;
+
+  prompt)
+    ensure
+    payload="$(cat 2>/dev/null || true)"
+    emit_event prompt "$payload"
+    emit_global "$(printf '{"ts":"%s","task":"%s","agent":"%s","event":"prompt"}' \
+                   "$(ts)" "$TASK_ID" "${AGENT_ROLE:-}")"
+    exit 0 ;;
+
+  snapshot)
+    ensure
+    payload="$(cat 2>/dev/null || true)"
+    snapshot_transcript "$payload"
+    exit 0 ;;
+
+  stop)
+    ensure
+    payload="$(cat 2>/dev/null || true)"
+    snapshot_transcript "$payload"
+    if [ -d "$VIEW" ]; then chmod -R u+w "$VIEW" 2>/dev/null || true; rm -rf "$VIEW" 2>/dev/null || true; fi
+    emit_global "$(printf '{"ts":"%s","task":"%s","event":"stop"}' "$(ts)" "$TASK_ID")"
+    exit 0 ;;
+
+  view)
+    case "${1:-}" in
+      --all)  [ -f "$GLOBAL" ] && cat "$GLOBAL" || echo "(empty)";;
+      --task) t="${2:-$TASK_ID}"; f="$STORE/$t/events.jsonl"; [ -f "$f" ] && cat "$f" || echo "(no events for $t)";;
+      *) echo "usage: transcripts view --all | --task <id>";;
+    esac ;;
+
+  prune)
+    ensure; N="${AGENTIC_TRANSCRIPTS_KEEP:-}"
+    [ -n "$N" ] || { echo "set AGENTIC_TRANSCRIPTS_KEEP=<n> to prune (default keeps everything)"; exit 0; }
+    for d in "$STORE"/*/; do
+      f="${d}events.jsonl"; [ -f "$f" ] || continue
+      n="$(wc -l < "$f" 2>/dev/null || echo 0)"
+      if [ "${n:-0}" -gt "$N" ]; then
+        head -n "$((n-N))" "$f" >> "$STORE/compacted/$(basename "$d").jsonl" 2>/dev/null || true
+        tail -n "$N" "$f" > "$f.tmp" 2>/dev/null && mv "$f.tmp" "$f" 2>/dev/null || true
+      fi
+    done
+    echo "pruned (keep $N/task)";;
+
+  *) echo "usage: transcripts {init|stage-in|record|prompt|snapshot|stop|view|prune}" >&2; exit 0 ;;
+esac

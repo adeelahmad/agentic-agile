@@ -4,7 +4,7 @@
 # Enforces the playbook invariant: the SUPERVISOR never writes production source.
 # All code (tests, stubs, implementation) is written by a dispatched worker in its
 # own worktree (RED → SCAFFOLD → GREEN). The supervisor owns ONLY planning artifacts
-# under docs/agents/** (+ the .agentic/.lineage worktree control files).
+# under docs/agents/** (+ the .agentic/.transcripts worktree control files).
 #
 # WHY a self-arming, session-scoped lock (not "a sprint dir exists"):
 #   This plugin's hooks fire for EVERY session on the machine. Gating on the mere
@@ -48,7 +48,7 @@ fi
 # and would not match the payload's /var path, silently disarming the guard.
 case "$file" in
   docs/agents/*|*/docs/agents/*)                 is_docs=1; is_ctl=0 ;;
-  .agentic/*|*/.agentic/*|.lineage/*|*/.lineage/*) is_docs=0; is_ctl=1 ;;
+  .agentic/*|*/.agentic/*|.transcripts/*|*/.transcripts/*) is_docs=0; is_ctl=1 ;;
   *)                                             is_docs=0; is_ctl=0 ;;
 esac
 

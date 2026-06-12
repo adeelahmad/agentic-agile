@@ -300,16 +300,17 @@ EXECUTION  (autonomous, supervisor present, human absent)
   advisory.
 
 ================================================================================
-## 12. v0.2 additions (lineage, retrospective/memory, manifests)
+## 12. v0.2 additions (transcripts, retrospective/memory, manifests)
 
 - Manifests: `plugin/.claude-plugin/plugin.json` (install entrypoint) + root
   `.claude-plugin/marketplace.json` (catalog, source `./plugin`).
-- Hooks added: `SubagentStart * -> lineage stage-in`; `PostToolUse * -> lineage record`;
-  `SubagentStop * -> lineage stage-out`. `final-gate` moved from `Stop` to
+- Hooks: `UserPromptSubmit * -> transcripts prompt`; `SubagentStart * -> transcripts stage-in`;
+  `PostToolUse * -> transcripts record` (full payload); `Stop * -> transcripts snapshot`;
+  `SubagentStop * -> transcripts stop` (snapshot + stage-out). `final-gate` runs on
   `SubagentStop`/`final-gate`.
-- `bin/lineage` (file-based) + per-worktree `.agentic/task.env` contract; `_gatelib.sh`
+- `bin/transcripts` (file-based) + per-worktree `.agentic/task.env` contract; `_gatelib.sh`
   sources it so the gates get TASK_ID / SCOPE_GLOBS / SCAFFOLD_SYMBOLS / BASE_REF for
-  real (closes the env-injection gap). `.agentic/`, `.lineage/` are git-ignored.
+  real (closes the env-injection gap). `.agentic/`, `.transcripts/` are git-ignored.
 - Retrospective activity (`pipeline/planning/retrospective/`) + `archivist` agent +
   `schemas/memory.kdl`; `memory.md` -> `init.md # Memory` (role-scoped).
 - Scaffold gate fix: symbols from `.agentic/scaffold-symbols`; shims keyed on

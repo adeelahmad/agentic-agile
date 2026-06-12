@@ -60,14 +60,15 @@ init.md and output.md are NEW artifacts with fixed sections -> fully md-db-valid
     .claude-plugin/plugin.json   the installable manifest (now present)
     skills/agentic-agile/SKILL.md the supervisor's playbook (canonical)
     pipeline/planning/retrospective/  runs FIRST every planning session (the archivist)
-    agents/archivist.md          read-only; distills memory from the lineage
+    agents/archivist.md          read-only; distills memory from the transcripts
     schemas/memory.kdl           validates docs/agents/memory.md
-    bin/lineage                  task-scoped lineage tool (stage-in / record / stage-out)
+    bin/transcripts                  full capture (stage-in / record / prompt / snapshot / stop)
     tools/ctx-symbols/           the symbol backend (build + install)
 
-Lineage: a global append-only `lineage.jsonl` + per-task transcripts. Each sub-agent
-gets a READ-ONLY task slice staged into its worktree (`.lineage/`) at SubagentStart;
-every tool call is recorded (PostToolUse); the slice is removed at SubagentStop. The
+Transcripts: a global append-only `global.jsonl` + per-task `events.jsonl` (full tool
+payloads + prompts) + `transcript.jsonl` (the complete session snapshot). Each sub-agent
+gets a READ-ONLY task slice staged into its worktree (`.transcripts/`) at SubagentStart;
+every tool call and prompt is recorded; the full session is snapshotted on stop. The
 supervisor reads the global store; the retrospective distills it into memory.md, which
 is injected (role-scoped) into each init.md `# Memory` section.
 The gates read their per-task contract from `.agentic/task.env` (supervisor-written).

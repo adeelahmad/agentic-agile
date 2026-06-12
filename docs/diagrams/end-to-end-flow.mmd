@@ -21,7 +21,7 @@ flowchart TD
   MEM[("memory.md<br/>terse, role-scoped, recurrence-gated")]
   RETRO -->|"writes / curates"| MEM
 
-  SUPER["SUPERVISOR<br/>orchestrates execution, reads the GLOBAL lineage"]
+  SUPER["SUPERVISOR<br/>orchestrates execution, reads the GLOBAL transcripts"]
   G2 -->|"approved plan"| SUPER
 
   subgraph EXEC["EXECUTION - autonomous, hook-enforced, per wave (one worktree per task)"]
@@ -54,8 +54,8 @@ flowchart TD
   GSCAF -->|"reject: feedback"| INIT
   GGREEN -->|"fail: feedback"| INIT
 
-  LIN[("lineage.jsonl (global)<br/>+ per-task transcripts")]
-  EXEC -.->|"record every call (PostToolUse); stage-out on stop"| LIN
+  LIN[("global.jsonl<br/>+ per-task events + full transcript")]
+  EXEC -.->|"record full payload (PostToolUse); snapshot on stop"| LIN
   LIN -.->|"stage-in: read-only task transcript into worktree"| INIT
   LIN -.->|"global view"| SUPER
   LIN -.->|"read to distill memory"| RETRO

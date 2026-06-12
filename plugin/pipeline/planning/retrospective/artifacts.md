@@ -1,7 +1,7 @@
 # Artifacts — retrospective
 
 READS
-- the global lineage (lineage.jsonl + per-task transcripts)
+- the global transcripts (global.jsonl + per-task transcripts)
 - docs/agents/sprint*/**/attempt-*/{init.md,output.md}   (feedback + findings)
 - docs/agents/sprint*/execution.log                       (escalations, halts)
 

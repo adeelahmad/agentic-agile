@@ -85,7 +85,7 @@ them the gates WARN and fall back to grep (never a false block, never a silent p
   STRUCTURAL-REVIEW, then once per sprint a FINAL-GATE. One worktree-isolated
   sub-agent per task; merge on pass, abandon the chain on a foundation-poisoning halt.
 
-- **Lineage** (v0.2): every tool call is recorded to a global `lineage.jsonl` +
+- **Transcripts** (v0.2): every tool call is recorded to a global `global.jsonl` +
   per-task transcripts; each sub-agent gets a READ-ONLY task slice in its worktree;
   the supervisor reads the whole stream.
 - **Retrospective + memory** (v0.2): every planning session distills recurring
