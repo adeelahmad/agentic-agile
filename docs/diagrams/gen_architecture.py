@@ -37,6 +37,14 @@ def node(x,y,w,h,fill,lines,double=False,ts=14):
         col=TX if wt=="700" else TX2
         add('  <text x="%.0f" y="%.1f" text-anchor="middle" font-size="%s" font-weight="%s" fill="%s">%s</text>' % (cx,by,sz,wt,col,escape(t)))
 
+def actor(cx,cy,fill=BLUE):
+    # stick-figure human actor (clearly NOT an agent box)
+    add('  <circle cx="%d" cy="%d" r="10" fill="%s" stroke="%s" stroke-width="2.5"/>' % (cx,cy-18,fill,STROKE))
+    add('  <line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="2.5"/>' % (cx,cy-8,cx,cy+12,STROKE))
+    add('  <line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="2.5"/>' % (cx-13,cy,cx+13,cy,STROKE))
+    add('  <line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="2.5"/>' % (cx,cy+12,cx-10,cy+25,STROKE))
+    add('  <line x1="%d" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-width="2.5"/>' % (cx,cy+12,cx+10,cy+25,STROKE))
+
 def arrow(x1,y1,x2,y2,color=ARR,mk="arr",w=2.0,dash=None):
     d=' stroke-dasharray="%s"'%dash if dash else ''
     add('  <line x1="%.0f" y1="%.0f" x2="%.0f" y2="%.0f" stroke="%s" stroke-width="%s"%s marker-end="url(#%s)"/>' % (x1,y1,x2,y2,color,w,d,mk))
@@ -48,24 +56,27 @@ def alabel(x,y,t):
 
 # ── BAND 1 : PLANNING ──────────────────────────────────────────────
 band(30,82,1140,168,"①  PLANNING  ·  interactive, human-gated")
-node(50,150,92,50,BLUE,[("Human",14,"700"),("you",11,"400")])
-node(172,140,148,70,TEAL,[("Supervisor",14,"700"),("agentic-agile skill",10.5,"400")],double=True)
-node(356,151,96,48,TEAL,[("intake",13,"700")])
-node(472,151,112,48,TEAL,[("standards",13,"700")])
-node(604,151,96,48,TEAL,[("planner",13,"700")])
-node(720,144,162,62,GRAY,[("Stage-2 plans",13,"700"),("stories·tasks·validate·plan",10,"400")])
-node(905,144,142,62,BEIGE,[("Human approval",12.5,"700"),("go / no-go",10.5,"400")])
-arrow(142,175,170,175)
-arrow(320,175,354,175); alabel(337,168,"dispatch")
-arrow(452,175,470,175)
-arrow(584,175,602,175)
-arrow(700,175,718,175)
-arrow(882,175,903,175)
+# HUMAN INPUT — a person, not a box
+actor(80,170)
+add('  <text x="80" y="214" text-anchor="middle" font-size="13" font-weight="700" fill="%s">Human</text>' % TX)
+add('  <text x="80" y="228" text-anchor="middle" font-size="10.5" fill="%s">you · the input</text>' % TX2)
+node(190,140,148,70,TEAL,[("Supervisor",14,"700"),("agentic-agile skill",10.5,"400")],double=True)
+node(372,151,96,48,TEAL,[("intake",13,"700")])
+node(488,151,112,48,TEAL,[("standards",13,"700")])
+node(620,151,92,48,TEAL,[("planner",13,"700")])
+node(730,144,158,62,GRAY,[("Stage-2 plans",13,"700"),("stories·tasks·validate·plan",10,"400")])
+node(908,140,142,70,BEIGE,[("✋ Human approval",12,"700"),("you decide:",10,"400"),("go / no-go",10,"400")])
+arrow(104,170,188,170); alabel(146,163,'"build X…"')
+arrow(338,175,370,175); alabel(354,168,"dispatch")
+arrow(468,175,486,175)
+arrow(600,175,618,175)
+arrow(712,175,728,175)
+arrow(888,175,906,175)
 
 # ── BAND 2 : EXECUTION ─────────────────────────────────────────────
 band(30,275,1140,238,"②  EXECUTION  ·  autonomous, hook-enforced  ·  one worktree-isolated sub-agent per task")
 # approval -> execution (vertical gate)
-arrow(976,206,976,273,w=2.2); alabel(976,250,"approved → run")
+arrow(979,210,979,273,w=2.2); alabel(979,250,"approved → run")
 # per-task worktree sub-container
 add('  <rect x="50" y="330" width="800" height="158" rx="11" fill="#ffffff" fill-opacity="0.5" stroke="%s" stroke-width="1.3" stroke-dasharray="5,4"/>' % STROKE)
 add('  <text x="66" y="350" font-size="11.5" font-weight="700" fill="%s">per task · git worktree  (each step a SubagentStop gate that blocks on fail)</text>' % TX2)
