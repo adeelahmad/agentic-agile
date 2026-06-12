@@ -20,6 +20,41 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.4.0] - 2026-06-12
+
+### Fixed
+- **`make install` failed on rustc < 1.95.** The committed `md-db` `Cargo.lock`
+  pinned `kdl@6.7.1`, whose MSRV jumped to 1.95 at the 6.6.0 release, so the build
+  died (`kdl@6.7.1 requires rustc 1.95`) on toolchains as recent as 1.94.1. Pinned
+  `kdl` back to `6.5.0` (MSRV 1.82, still within the `kdl = "6"` range). Verified by a
+  clean rebuild under rustc 1.94.1. Corrected the stale `install.sh` header comment
+  (it claimed edition 2024 / rustc ≥ 1.85).
+
+### Added
+- **`gate-supervisor-scope`** (`PreToolUse · Write|Edit|MultiEdit`) — blocks the
+  supervisor from writing production source while a sprint is live in the current
+  session, forcing all code through dispatched workers. Uses a session-scoped,
+  self-arming lock (armed on the first `docs/agents/**` write) so a stale lock from an
+  abandoned sprint never blocks unrelated future sessions. Honors `SKIP_HOOKS=1`.
+- **`gate-tooling`** (`SubagentStart` on execution roles + a manual supervisor
+  preflight) — BLOCKS the first worker dispatch unless `md-db` and `ctx-symbols` are
+  on PATH. Execution no longer starts silently grep-degraded; planning may still run
+  degraded. `selfcheck tooling` runs it. Honors `SKIP_HOOKS=1`.
+
+- **Worktree-isolation enforcement** in the writing-worker gates. `_gatelib.sh` gains
+  `assert_worktree_isolation`, called by `gate-red/scaffold/green-verify`: a worker
+  that ran in the shared/main tree (detected via `.git` being a directory rather than
+  a worktree's `gitdir:` file) is BLOCKED. Stops the supervisor from silently dropping
+  isolation as an "environmental adaptation". Honors `SKIP_HOOKS=1`.
+
+### Changed
+- `SKILL.md`: added the "supervisor never writes production source" guardrail and an
+  ambiguous-resume rule ("go on"/"continue" = re-dispatch the last activity, never
+  "build it directly"); documented the execution tooling preflight. Added the
+  **schedule-vs-invariant** rule (adapt order/parallelism freely; never relax
+  worktree isolation, gates, TDD ordering, or no-suppression — those escalate to
+  planning) and the sanctioned disk-pressure path (serialize worktrees, don't share).
+
 ## [0.3.1] - 2026-06-08
 
 ### Changed

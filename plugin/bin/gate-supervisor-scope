@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# gate-supervisor-scope — PreToolUse(Write|Edit|MultiEdit|NotebookEdit).
+#
+# Enforces the playbook invariant: the SUPERVISOR never writes production source.
+# All code (tests, stubs, implementation) is written by a dispatched worker in its
+# own worktree (RED → SCAFFOLD → GREEN). The supervisor owns ONLY planning artifacts
+# under docs/agents/** (+ the .agentic/.lineage worktree control files).
+#
+# WHY a self-arming, session-scoped lock (not "a sprint dir exists"):
+#   This plugin's hooks fire for EVERY session on the machine. Gating on the mere
+#   presence of docs/agents/sprintN/ would permanently block source edits in any repo
+#   that ever ran a sprint. Instead, writing a planning artifact arms a lock stamped
+#   with THIS session's id; only that session is then bound. A stale lock from an
+#   abandoned sprint carries a different session_id and is inert.
+#
+# Exit: 0 allow · 2 block (stderr handed back to the model). Honors SKIP_HOOKS=1.
+set -uo pipefail
+GATE_NAME=supervisor-scope
+
+[ "${SKIP_HOOKS:-}" = "1" ] && exit 0
+
+payload="$(cat 2>/dev/null || true)"
+field() { printf '%s' "$payload" | sed -nE "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/p" | head -1; }
+tool="$(field tool_name)"
+file="$(field file_path)"
+session="$(field session_id)"
+
+# Only guard file-mutating tools that carry a path.
+case "$tool" in Write|Edit|MultiEdit|NotebookEdit) ;; *) exit 0 ;; esac
+[ -n "$file" ] || exit 0
+
+# No session id => fail OPEN (don't risk blocking a non-agentic session).
+[ -n "$session" ] || exit 0
+
+root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+lock="$root/docs/agents/.agentic/sprint.lock"   # under git-ignored .agentic/
+
+# Worker context: a dispatched worker's worktree carries .agentic/task.env with a
+# worker AGENT_ROLE (resolved from the worktree root, as _gatelib.sh does). Workers
+# are SUPPOSED to write code — never block them.
+if [ -f "$root/.agentic/task.env" ] \
+   && grep -qE '^[[:space:]]*AGENT_ROLE=("?)(red-worker|scaffolder|green-worker)\1' "$root/.agentic/task.env" 2>/dev/null; then
+  exit 0
+fi
+
+# Classify the target path. Match relative AND absolute forms — do NOT prefix-strip
+# against $root: on macOS `git rev-parse --show-toplevel` resolves /private symlinks
+# and would not match the payload's /var path, silently disarming the guard.
+case "$file" in
+  docs/agents/*|*/docs/agents/*)                 is_docs=1; is_ctl=0 ;;
+  .agentic/*|*/.agentic/*|.lineage/*|*/.lineage/*) is_docs=0; is_ctl=1 ;;
+  *)                                             is_docs=0; is_ctl=0 ;;
+esac
+
+# Planning artifact: ARMS the lock for this session (a sprint is live here), allow.
+if [ "$is_docs" = 1 ]; then
+  mkdir -p "$(dirname "$lock")" 2>/dev/null && printf '%s\n' "$session" > "$lock" 2>/dev/null || true
+  exit 0
+fi
+# Worktree control file the supervisor writes at dispatch: allow.
+[ "$is_ctl" = 1 ] && exit 0
+
+# Production source. Block only if THIS session armed the lock (a sprint is live now).
+if [ -f "$lock" ] && [ "$(head -1 "$lock" 2>/dev/null)" = "$session" ]; then
+  echo "BLOCK[$GATE_NAME]: the supervisor may not write production source during a sprint:" >&2
+  echo "    $file" >&2
+  echo "  You own ONLY planning artifacts (docs/agents/**). Code is written by a worker in" >&2
+  echo "  its own worktree: dispatch the matching subagent (red-worker / scaffolder /" >&2
+  echo "  green-worker) for this task — do NOT hand-build it yourself." >&2
+  echo "  Ambiguous resume ('go on', 'continue') means re-dispatch the LAST activity, never" >&2
+  echo "  'build it directly'." >&2
+  echo "  (Deliberate out-of-band edit outside the pipeline? Re-run with SKIP_HOOKS=1.)" >&2
+  exit 2
+fi
+exit 0

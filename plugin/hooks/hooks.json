@@ -1,6 +1,12 @@
 {
   "hooks": {
+    "PreToolUse": [
+      { "matcher": "Write|Edit|MultiEdit|NotebookEdit", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-supervisor-scope" } ] }
+    ],
     "SubagentStart": [
+      { "matcher": "red-worker|scaffolder|green-worker|structural-reviewer|final-gate", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-tooling" } ] },
       { "matcher": "*", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/lineage stage-in" } ] }
     ],

@@ -18,10 +18,12 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 ## Gates (which hook fires each)
 | script | event · matcher | checks | exit 2 when |
 |--------|-----------------|--------|-------------|
+| gate-supervisor-scope     | PreToolUse · Write\|Edit\|MultiEdit | supervisor writes only docs/agents/** while a sprint is live this session (session-scoped self-arming lock); workers exempt | supervisor writes production source mid-sprint |
+| gate-tooling              | SubagentStart · exec roles + supervisor self-check | md-db + ctx-symbols on PATH (execution may not run grep-degraded) | a backend is missing |
 | gate-validate-artifact    | PostToolUse · Write         | md-db-validate the written artifact | artifact malformed |
-| gate-red-verify           | SubagentStop · red-worker   | every new test FAILS BY ASSERTION; no regression; diff = tests+shims | a new test passes / prod code / regression |
-| gate-scaffold-verify      | SubagentStop · scaffolder   | one def per symbol (`.agentic/scaffold-symbols`); panic+TODO; no marked shim; no clobber | impl body / dup / shim remains |
-| gate-green-verify         | SubagentStop · green-worker | tests pass; in-scope diff; standards matrix; zero suppressions | failing test / out-of-scope / suppression |
+| gate-red-verify           | SubagentStop · red-worker   | worktree-isolated; every new test FAILS BY ASSERTION; no regression; diff = tests+shims | shared-tree run / a new test passes / prod code / regression |
+| gate-scaffold-verify      | SubagentStop · scaffolder   | worktree-isolated; one def per symbol (`.agentic/scaffold-symbols`); panic+TODO; no marked shim; no clobber | shared-tree run / impl body / dup / shim remains |
+| gate-green-verify         | SubagentStop · green-worker | worktree-isolated; tests pass; in-scope diff; standards matrix; zero suppressions | shared-tree run / failing test / out-of-scope / suppression |
 | gate-structural-integrity | SubagentStop · structural-reviewer | orphan/parallel/duplicate via ctx-symbols | foundation-poisoning finding |
 | gate-final                | SubagentStop · final-gate   | full matrix; zero suppressions; all plan-ready ticked | matrix red / suppression / unticked |
 | gate-standards-cited      | SubagentStop · standards    | standards.md citations resolve | dangling citation |

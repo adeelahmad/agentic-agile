@@ -8,6 +8,9 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$HERE/_gatelib.sh"
 
+# 0) Worktree isolation (invariant): this worker must run in a linked worktree.
+assert_worktree_isolation
+
 root="$(repo_dir)"
 have_ctx_symbols || warn "ctx-symbols absent; using grep fallback for uniqueness (fragile)"
 

@@ -35,8 +35,33 @@ doc). It folds the structural-review corrections directly into the process.
 - The human is absent from execution. Never block waiting for human input mid-run.
 - **You own all planning artifacts.** Sub-agents NEVER edit `stories.md`,
   `tasks.md`, `validate.md`, `plan.md`, `plan-ready.md`, or `sprintN/plan.md`.
+- **You NEVER write production source — in any phase.** Every line of code (tests,
+  scaffold stubs, implementation) is written by a dispatched worker in its own
+  worktree. If you catch yourself about to `Write`/`Edit` a source file, STOP and
+  dispatch the matching worker (`red-worker` / `scaffolder` / `green-worker`). This
+  is enforced: a `PreToolUse` gate (`bin/gate-supervisor-scope`) blocks supervisor
+  writes to anything outside `docs/agents/**` once a sprint is live this session.
+- **Ambiguous resume words bind to the pipeline, not to shortcuts.** If the human
+  says "go on", "continue", "proceed", "go", or "yes" after a dispatch or interrupt,
+  it means *resume the LAST activity / continue the playbook exactly as written* —
+  re-dispatch the agent that was running. It NEVER means "skip the gates", "build it
+  yourself", or "change the approach". When genuinely unsure which activity to
+  resume, ask — do not pick the faster path.
 - The **scaffolder leaves `panic("SUB-AGENT-TODO: …")` only** — it never
   implements a body.
+- **Worktree isolation is an INVARIANT.** Every writing-worker dispatch
+  (`red-worker` / `scaffolder` / `green-worker`) runs in its own linked git worktree
+  — NEVER the shared/main tree. Diff-scoping, clean abandon-on-HALT, and parallel
+  safety all depend on it. The `gate-red/scaffold/green-verify` gates BLOCK a worker
+  that ran in the shared tree.
+- **You may adapt the SCHEDULE; you may NOT relax an INVARIANT.** Order, parallelism,
+  and serialization are yours to tune to the environment (e.g. low disk → serialize
+  waves, one worktree at a time, clean up between tasks). The invariants —
+  worktree isolation, the gates, RED→SCAFFOLD→GREEN ordering, no test suppression,
+  human-only planning — are NOT. A memory or environment note can justify a schedule
+  change; it can NEVER justify weakening an invariant. If a real constraint seems to
+  force relaxing one, that ESCALATES to planning — you do not self-authorize it
+  mid-execution.
 - **No test suppression, ever** (`#[ignore]`, `.skip(`, `xit(`, `#[cfg(not(test))]`
   over an assertion, deleting/weakening an assertion). RED is cleared by GREEN.
 - Gates are enforced by the platform via top-level `hooks.json` matched by
@@ -44,7 +69,10 @@ doc). It folds the structural-review corrections directly into the process.
   rely on it.
 - A gate whose backend (`md-db` / `ctx-symbols`) is missing WARNS and falls back
   to grep; it never silently passes a real check. Treat a WARN as a weakened gate,
-  not a pass.
+  not a pass. **PLANNING may run degraded; EXECUTION may not** — the preflight
+  `bin/gate-tooling` (SubagentStart on every execution role + your manual
+  pre-dispatch check) BLOCKS the first worker dispatch until both backends are on
+  PATH. Don't enter RED with grep-only gates.
 
 ================================================================================
 # PART A — PLANNING (interactive, human present)
@@ -141,16 +169,22 @@ planning bind execution.
 
 ## Planning → execution handoff gate (OPEN-3: supervisor self-check)
 
-Before the FIRST execution dispatch, run the self-check yourself:
+Before the FIRST execution dispatch, run BOTH self-checks yourself:
 
 ```
+${CLAUDE_PLUGIN_ROOT}/bin/gate-tooling                       # backends present?
 ${CLAUDE_PLUGIN_ROOT}/bin/gate-stage2-complete docs/agents/sprintN
 ```
 
-It blocks (exit 2) unless **every** story in `stories.md` has a `sN-NN-<slug>/`
-dir with `tasks.md` + `validate.md` + `plan.md`, no `TBW` remains, and md-db
-validates the tree. Partial Stage-2 is forbidden — all-or-nothing per sprint.
-Do not dispatch until this exits 0. (The PostToolUse `gate-validate-artifact`
+`gate-tooling` blocks (exit 2) unless `md-db` AND `ctx-symbols` are on PATH — unlike
+the per-step gates, execution will NOT start with grep-only fallback. If it blocks,
+run `make install` and put `~/.local/bin` on PATH (or `SKIP_HOOKS=1` to knowingly
+accept weakened gates). It also runs as a SubagentStart hook on every execution role.
+
+`gate-stage2-complete` blocks unless **every** story in `stories.md` has a
+`sN-NN-<slug>/` dir with `tasks.md` + `validate.md` + `plan.md`, no `TBW` remains, and
+md-db validates the tree. Partial Stage-2 is forbidden — all-or-nothing per sprint.
+Do not dispatch until both exit 0. (The PostToolUse `gate-validate-artifact`
 hook validates each artifact as you write it, regardless.)
 
 ================================================================================
@@ -304,6 +338,11 @@ start the next wave's RED, or if this was the last wave, FINAL-GATE.
 - Each dispatch runs in its own worktree. RED/scaffold/GREEN for a task share that
   task's worktree chain; nothing touches the integration branch until a gate
   passes.
+- **Resource pressure → serialize, don't share.** If disk/memory can't sustain
+  parallel worktrees, run them ONE AT A TIME and remove each worktree before creating
+  the next (`git worktree remove` after merge/abandon). This bounds footprint to a
+  single worktree while preserving isolation. Falling back to the shared/main tree is
+  NOT a valid response to resource pressure — the worker gates block it.
 - **Merge on pass** (GREEN gate green + boxes ticked).
 - **Abandon on HALT** (structural foundation-poisoning): drop the chain's
   in-flight worktrees, keep merged waves. Worktree isolation makes "revert on
@@ -382,7 +421,12 @@ source of truth the gate uses, so first-pass blocks become rare.
 
 ## Available scripts
 
-- `bin/selfcheck [role]` — run your activity's gate as a self-check before reporting.
+- `bin/selfcheck [role]` — run your activity's gate as a self-check before reporting
+  (`selfcheck tooling` runs the execution preflight).
+- `bin/gate-tooling` — execution preflight; BLOCKS the first dispatch unless md-db +
+  ctx-symbols are on PATH (SubagentStart hook + manual pre-dispatch check).
+- `bin/gate-supervisor-scope` — PreToolUse guard; blocks the supervisor from writing
+  production source while a sprint is live this session (code goes through workers).
 - `bin/lineage …` — task-scoped lineage (managed by hooks; `lineage --help`).
 - `bin/<gate>` — the individual gates (hook-invoked; see `bin/README.md` for each
   gate, its event/matcher, and exit codes).

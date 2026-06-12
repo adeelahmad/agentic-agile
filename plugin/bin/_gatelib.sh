@@ -120,6 +120,27 @@ assert_no_suppression() {
   fi
 }
 
+# Worktree-isolation invariant. A writing worker (red/scaffolder/green) MUST run in a
+# linked git worktree, never the shared/main working tree: diff-scoping, clean
+# abandon-on-HALT, and parallel safety all depend on it. Detection is deterministic —
+# a linked worktree's .git is a FILE (a `gitdir:` pointer); the main tree's .git is a
+# DIRECTORY. A memory/environment note (e.g. low disk) may change the SCHEDULE
+# (serialize waves, one worktree at a time, clean up between tasks) but must NEVER drop
+# isolation; that is not a supervisor-adjudicable adaptation. SKIP_HOOKS=1 overrides.
+assert_worktree_isolation() {
+  [ "${SKIP_HOOKS:-}" = "1" ] && return 0
+  case "${AGENT_ROLE:-}" in red-worker|scaffolder|green-worker) ;; *) return 0 ;; esac
+  local root; root="$(repo_dir)"
+  if [ -d "$root/.git" ]; then
+    fail "worktree isolation dropped: ${AGENT_ROLE} ran in the SHARED tree ($root), not a
+  linked worktree. Isolation is an INVARIANT, not a schedule choice — re-dispatch this
+  task with isolation: \"worktree\". Under disk/resource pressure, SERIALIZE worktrees
+  (one at a time, removed between tasks); do not fall back to the shared tree. If a
+  constraint truly forces relaxing an invariant, ESCALATE to planning — never
+  self-authorize. (Deliberate override? SKIP_HOOKS=1.)"
+  fi
+}
+
 # Run the gate matrix declared in standards.md (standards-bind-gates). Falls back
 # to a default Rust matrix with a WARN if standards.md / its matrix is not found.
 run_standards_matrix() {

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# gate-tooling — EXECUTION preflight. Run before the first worker dispatch.
+#
+# The per-step gates WARN-and-degrade to grep when a backend is missing (so PLANNING
+# can proceed without the Rust tools). EXECUTION is different: a sprint must not enter
+# RED with silently-weakened gates. This gate BLOCKS (exit 2) unless both backends are
+# on PATH, turning a quiet degrade into a loud, actionable stop.
+#
+# Wired as a SubagentStart hook on the execution roles (red/scaffolder/green/
+# structural-reviewer/final-gate) AND mandated as a manual supervisor preflight in
+# SKILL.md. Honors SKIP_HOOKS=1 for someone who knowingly accepts grep-fallback gates.
+#
+# Exit: 0 = both backends present (full enforcement) · 2 = block.
+set -uo pipefail
+GATE_NAME=tooling
+
+[ "${SKIP_HOOKS:-}" = "1" ] && exit 0
+
+missing=""
+command -v md-db       >/dev/null 2>&1 || missing="$missing md-db"
+command -v ctx-symbols >/dev/null 2>&1 || missing="$missing ctx-symbols"
+
+if [ -n "$missing" ]; then
+  echo "BLOCK[$GATE_NAME]: execution backends not on PATH:$missing" >&2
+  echo "  Without them the RED/SCAFFOLD/GREEN gates degrade to grep (weaker structural" >&2
+  echo "  checks, name-only duplicate detection) — execution must not start that way." >&2
+  echo "  Install:  make install   (builds md-db + ctx-symbols into ~/.local/bin)" >&2
+  echo "  Then ensure that dir is on PATH (e.g. export PATH=\"\$HOME/.local/bin:\$PATH\")." >&2
+  echo "  (Planning-only work, or knowingly accepting weakened gates? SKIP_HOOKS=1.)" >&2
+  exit 2
+fi
+
+echo "[$GATE_NAME] md-db + ctx-symbols on PATH — gates run at full strength." >&2
+exit 0
