@@ -64,6 +64,7 @@ clippy: ## Clippy with warnings-as-errors
 shellcheck: ## Lint gate scripts (skipped with a warning if shellcheck is absent)
 	@command -v shellcheck >/dev/null \
 	  && shellcheck -S error -e SC1091 plugin/bin/_gatelib.sh plugin/bin/gate-* plugin/bin/log-execution \
+	       plugin/bin/selfcheck plugin/bin/transcripts plugin/bin/worktree-create plugin/bin/worktree-remove \
 	  || echo "WARN: shellcheck not installed; skipping (CI enforces it)"
 
 .PHONY: json

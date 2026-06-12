@@ -20,6 +20,34 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.6.0] - 2026-06-13
+
+### Added
+- **Worktree isolation now works out of the box** (`bin/worktree-create` +
+  `bin/worktree-remove`, wired as `WorktreeCreate`/`WorktreeRemove` hooks). The
+  execution model requires every worker dispatch to use `isolation: "worktree"`, but
+  the harness's built-in worktree feature errored — *"Cannot create agent worktree: not
+  in a git repository and no WorktreeCreate hooks are configured"* — because the plugin
+  shipped no such hooks. Now it does: they run plain `git worktree add`/`remove`
+  (`agentic/<name>` off HEAD), so isolation works on any git repo with no settings.json
+  wiring. Idempotent — a task's RED → SCAFFOLD → GREEN reuse one worktree under the same
+  isolation name. The created worktree is a real linked worktree, so
+  `assert_worktree_isolation` is satisfied. No `jq` dependency.
+
+### Changed
+- `SKILL.md`: documented that worktree isolation is hook-backed and that a git repo
+  **with an initial commit** (the worktree base ref) is a prerequisite for execution —
+  a non-git/uncommitted tree is a prerequisite to FIX, never a reason to fall back to
+  the shared tree.
+- The CI `shellcheck` target now lints every `bin/` script (was: only `gate-*` +
+  `_gatelib.sh` + `log-execution`), so `transcripts`/`selfcheck`/`worktree-*` are covered.
+
+### Fixed
+- `gate-supervisor-scope` no longer blocks the supervisor from writing `.gitignore` /
+  `.gitattributes` during a sprint — VCS hygiene for the initial commit is never
+  application source, so it's allowed without the `SKIP_HOOKS=1` escape. Production
+  source is still blocked.
+
 ## [0.5.0] - 2026-06-12
 
 ### Changed

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# worktree-remove — WorktreeRemove hook. Cleans up the git worktree that
+# worktree-create made. Cleanup-only: it CANNOT block (removal proceeds regardless),
+# so it always exits 0. The branch (`agentic/<name>`) is intentionally left intact —
+# the supervisor merges it into the integration branch on GREEN before removal.
+#
+# Contract (official): stdin = JSON { cwd, worktree_path, isolation_name, ... }.
+set -uo pipefail
+
+payload="$(cat 2>/dev/null || true)"
+jstr() { printf '%s' "$payload" | sed -nE "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/p" | head -1; }
+
+cwd="$(jstr cwd)"; [ -n "$cwd" ] || cwd="$PWD"
+wt="$(jstr worktree_path)"
+[ -n "$wt" ] || exit 0
+
+git -C "$cwd" worktree remove --force "$wt" >/dev/null 2>&1 || {
+  rm -rf "$wt" 2>/dev/null || true
+  git -C "$cwd" worktree prune >/dev/null 2>&1 || true
+}
+exit 0

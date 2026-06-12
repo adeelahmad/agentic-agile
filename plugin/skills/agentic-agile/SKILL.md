@@ -95,6 +95,13 @@ artifacts under `docs/agents/sprintN/`.
 
 ## Prerequisites
 - A POSIX shell + git with worktrees. The gates and `bin/transcripts` are bash.
+- **A git repo with at least one commit** before execution. Worktree isolation is
+  provided by the plugin's `WorktreeCreate`/`WorktreeRemove` hooks (`bin/worktree-create`
+  / `bin/worktree-remove`), which run `git worktree add`/`remove` — so `isolation:
+  "worktree"` works out of the box on any git repo, no settings.json wiring. The first
+  worker can only branch off an existing commit, so make the initial commit (the
+  worktree base ref) before the first RED dispatch. If the repo isn't initialized,
+  `git init && git add -A && git commit` first.
 - `md-db` on PATH (optional) — validates `.md` artifacts against `schemas/*.kdl`;
   absent → grep fallback.
 - `ctx-symbols` on PATH (optional) — symbol uniqueness/duplication; absent → grep fallback.
@@ -204,7 +211,13 @@ hook validates each artifact as you write it, regardless.)
 
 Walk the waves in `sprintN/plan.md` top to bottom. Sibling stories in a wave run
 in parallel; wave K starts only after waves 1..K-1 are merged green. One
-sub-agent = one task. Every dispatch uses `isolation: "worktree"`.
+sub-agent = one task. Every dispatch uses `isolation: "worktree"` — the plugin's
+`WorktreeCreate`/`WorktreeRemove` hooks back it with `git worktree`, creating
+`agentic/<name>` off HEAD (idempotent, so a task's RED → SCAFFOLD → GREEN reuse one
+worktree when dispatched under the same isolation name). If the harness still cannot
+create a worktree (e.g. an uncommitted or non-git tree), FIX the prerequisite (init +
+initial commit) — do NOT fall back to the shared tree. A manual `git worktree add` per
+task (reused across the chain, removed on merge/abandon) is a sanctioned equivalent.
 
 ## The data plane (on-disk layout — the glue)
 

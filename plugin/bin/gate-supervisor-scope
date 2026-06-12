@@ -49,6 +49,9 @@ fi
 case "$file" in
   docs/agents/*|*/docs/agents/*)                 is_docs=1; is_ctl=0 ;;
   .agentic/*|*/.agentic/*|.transcripts/*|*/.transcripts/*) is_docs=0; is_ctl=1 ;;
+  # VCS hygiene the supervisor legitimately writes for the initial commit — never
+  # application source, so allow without the SKIP_HOOKS dance.
+  .gitignore|*/.gitignore|.gitattributes|*/.gitattributes) is_docs=0; is_ctl=1 ;;
   *)                                             is_docs=0; is_ctl=0 ;;
 esac
 

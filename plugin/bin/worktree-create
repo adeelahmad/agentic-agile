@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# worktree-create — WorktreeCreate hook. Makes the harness's `isolation: "worktree"`
+# dispatch work via plain `git worktree`, so every agentic-agile worker is isolated
+# without the user wiring anything. Without this hook the harness errors with
+# "Cannot create agent worktree: not in a git repository and no WorktreeCreate hooks".
+#
+# Contract (official): stdin = JSON { cwd, base_path, isolation_name, ... }. The hook
+# MUST create the worktree and print its absolute path on STDOUT (nothing else), exit 0.
+# Exit 2 blocks the dispatch (stderr shown). git's own chatter is sent to stderr so
+# STDOUT stays a single clean path. Idempotent: an existing worktree at the target path
+# is reused (lets a task's RED → SCAFFOLD → GREEN share one worktree).
+set -uo pipefail
+
+payload="$(cat 2>/dev/null || true)"
+jstr() { printf '%s' "$payload" | sed -nE "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/p" | head -1; }
+
+cwd="$(jstr cwd)";             [ -n "$cwd" ]  || cwd="$PWD"
+name="$(jstr isolation_name)"; [ -n "$name" ] || name="$(jstr name)"
+[ -n "$name" ] || name="iso"
+base="$(jstr base_path)";      [ -n "$base" ] || base="$cwd/.agentic/worktrees"
+
+git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+  echo "WorktreeCreate: '$cwd' is not a git repository — run 'git init && git add -A && git commit -m init' first." >&2
+  exit 2
+}
+git -C "$cwd" rev-parse HEAD >/dev/null 2>&1 || {
+  echo "WorktreeCreate: '$cwd' has no commits — make an initial commit before execution (it is the worktree base ref)." >&2
+  exit 2
+}
+
+safe="$(printf '%s' "$name" | tr -c 'A-Za-z0-9._-' '-' | sed 's/^-*//;s/-*$//')"
+[ -n "$safe" ] || safe="iso"
+path="$base/$safe"
+branch="agentic/$safe"
+
+mkdir -p "$base" 2>/dev/null || true
+
+# Idempotent reuse: a worktree already at this path is returned as-is.
+if [ -e "$path/.git" ]; then printf '%s\n' "$path"; exit 0; fi
+
+# Create from current HEAD. Reuse the branch if a prior attempt left it behind.
+if git -C "$cwd" show-ref --quiet --verify "refs/heads/$branch"; then
+  git -C "$cwd" worktree add "$path" "$branch" 1>&2 || true
+else
+  git -C "$cwd" worktree add -b "$branch" "$path" 1>&2 || true
+fi
+# Last resort: a detached worktree at HEAD.
+[ -e "$path/.git" ] || git -C "$cwd" worktree add --detach "$path" 1>&2 || true
+
+if [ -e "$path/.git" ]; then printf '%s\n' "$path"; exit 0; fi
+echo "WorktreeCreate: failed to create a git worktree at '$path'." >&2
+exit 2
