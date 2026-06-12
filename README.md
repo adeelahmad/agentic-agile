@@ -16,6 +16,12 @@
   
   ---
   
+  <div align="center">
+    <img src="docs/diagrams/architecture.png" alt="agentic-agile lifecycle: human-gated planning, autonomous hook-enforced TDD execution, and the deterministic enforcement layer" width="900">
+  </div>
+  
+  ---
+  
   # agentic-agile
 
 A Claude Code **plugin marketplace** containing the `agentic-agile` plugin:
@@ -32,7 +38,7 @@ block the stop and feed the failure reason back to the supervisor.
 
 ```bash
 # 1) Build + install the gate backends (ctx-symbols + md-db, both from source)
-#    requires a Rust toolchain >= 1.85 (rustup.rs or `brew install rust`)
+#    requires a Rust toolchain >= 1.82 (rustup.rs or `brew install rust`)
 ./plugin/tools/install.sh
 #    ensure ~/.local/bin (or ~/.cargo/bin) is on PATH
 
@@ -79,18 +85,27 @@ them the gates WARN and fall back to grep (never a false block, never a silent p
 
 ## What it does
 
-- **Planning** (human present): intake → standards → planner produce the sprint
-  contract + per-story `tasks.md` / `validate.md` / `plan.md`.
-- **Execution** (human absent): per wave, RED → SCAFFOLD → GREEN →
-  STRUCTURAL-REVIEW, then once per sprint a FINAL-GATE. One worktree-isolated
-  sub-agent per task; merge on pass, abandon the chain on a foundation-poisoning halt.
-
-- **Transcripts** (v0.2): every tool call is recorded to a global `global.jsonl` +
-  per-task transcripts; each sub-agent gets a READ-ONLY task slice in its worktree;
-  the supervisor reads the whole stream.
-- **Retrospective + memory** (v0.2): every planning session distills recurring
-  failures (and your own insights) into `docs/agents/memory.md`, injected into each
-  sub-agent's contract.
+- **Planning** (human present, one sprint at a time): the supervisor *dispatches* the
+  `intake` → `standards` → `planner` agents to produce the sprint contract + per-story
+  `tasks.md` / `validate.md` / `plan.md` — then stops for your approval.
+- **Execution** (human absent): per wave, RED → SCAFFOLD → GREEN → STRUCTURAL-REVIEW,
+  then once per sprint a FINAL-GATE. One **git-worktree-isolated** sub-agent per task
+  (isolation works out of the box via the plugin's `WorktreeCreate`/`WorktreeRemove`
+  hooks); merge on pass, abandon the chain on a foundation-poisoning halt.
+- **Determinism is structural, not vibes.** Hooks enforce the invariants the model
+  can't talk its way past: the supervisor can't write production source
+  (`gate-supervisor-scope`), can't start execution with its backends missing
+  (`gate-tooling`), can't drop worktree isolation, and can't pass a sub-agent stop whose
+  gate failed (`gate-red/scaffold/green/structural/final-verify`).
+- **Agent comms** are a story-bound, append-only `init.md` ⇄ `output.md` pair: the
+  supervisor appends each dispatch's contract, the agent appends its report — the full
+  negotiation history, enforced (`validate_comms` blocks a dispatch that left no report).
+- **Transcripts**: full capture — every tool call's input *and* output, every user
+  prompt, and a complete session snapshot (all messages + thinking) per task, plus a
+  thin cross-task causal stream. Each sub-agent gets a READ-ONLY slice; the supervisor
+  reads the whole store.
+- **Retrospective + memory**: every planning session distills recurring failures (and
+  your own insights) into `docs/agents/memory.md`, injected into each sub-agent's contract.
 
 Full operator playbook: [`plugin/skills/agentic-agile/SKILL.md`](plugin/skills/agentic-agile/SKILL.md).
 
@@ -100,7 +115,7 @@ Full operator playbook: [`plugin/skills/agentic-agile/SKILL.md`](plugin/skills/a
 |------|-----------|---------|---------|
 | **ctx-symbols** | recommended | symbol uniqueness (`count==1`) + duplicate/orphan detection | `./plugin/tools/install.sh` (builds from `plugin/tools/ctx-symbols`) |
 | **md-db** | recommended | validates `.md` artifacts against `plugin/schemas/*.kdl` | `./plugin/tools/install.sh` (builds from vendored `plugin/tools/md-db`, AGPL-3.0) |
-| **Rust toolchain** | required to install | builds both backends; also runs the target repo's fmt/clippy/test/coverage matrix | rustup (>= 1.85) |
+| **Rust toolchain** | required to install | builds both backends; also runs the target repo's fmt/clippy/test/coverage matrix | rustup (>= 1.82) |
 
 Both backends are optional: absent → gates WARN and fall back to grep (never a false
 block, never a silent pass). See [`plugin/README.md`](plugin/README.md) for the gate
@@ -171,11 +186,12 @@ make publish        # pushes branch + tags
 
 ## Status
 
-Plugin implemented for a **Rust** target; gate bodies verified offline (positive +
-negative) against a sample one-story sprint. Before relying on it: smoke-test the
-hook wiring in a live Claude Code session (CI runs `plugin validate` but not a live
-session). Set the real `repository` URL in `plugin/.claude-plugin/plugin.json` when
-you create the public repo.
+Published at [github.com/adeelahmad/agentic-agile](https://github.com/adeelahmad/agentic-agile).
+The standards matrix targets **Rust** by default (retarget by editing `standards.md` +
+the gates — see [`plugin/README.md`](plugin/README.md)). Gate bodies are unit-tested and
+verified offline (positive + negative); CI runs `plugin validate` but not a live session,
+so smoke-test the hook wiring in a real Claude Code session before relying on it
+end-to-end.
 
 ## License
 
