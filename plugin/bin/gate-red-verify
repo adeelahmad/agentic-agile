@@ -11,24 +11,23 @@ source "$HERE/_gatelib.sh"
 assert_worktree_isolation
 
 # 1) output.md / init.md structure.
-validate_agent_io
+validate_comms
 
-# 2) Parse output.md Result table: no NEW test (a `::` Check) may be PASS; >=1 FAIL.
-[ -n "${ATTEMPT_DIR:-}" ] || warn "ATTEMPT_DIR unset; output.md checks skipped (relying on cargo)"
-if out="$(find_in_attempt output.md)"; then
-  test_rows="$(grep -E '^\|.*::.*\|' "$out" || true)"
-  if [ -n "$test_rows" ]; then
-    if echo "$test_rows" | grep -qiE '\|[[:space:]]*PASS[[:space:]]*\|'; then
-      fail "a NEW test PASSED in RED (test exercises nothing) — output.md has a PASS row"
-    fi
-    echo "$test_rows" | grep -qiE '\|[[:space:]]*FAIL[[:space:]]*\|' \
-      || fail "no FAILing test row in output.md — RED produced no failing test"
-  else
-    warn "output.md Result has no recognizable test rows (path::fn); relying on cargo run"
+# 2) Parse the LATEST output.md block's Result table: no NEW test (`::` Check) may be
+#    PASS; >=1 FAIL. validate_comms already proved the block exists and is this dispatch's.
+block="$(latest_block "${STORY_DIR:-}/output.md")"
+test_rows="$(printf '%s\n' "$block" | grep -E '^\|.*::.*\|' || true)"
+if [ -n "$test_rows" ]; then
+  if printf '%s\n' "$test_rows" | grep -qiE '\|[[:space:]]*PASS[[:space:]]*\|'; then
+    fail "a NEW test PASSED in RED (test exercises nothing) — latest output.md block has a PASS row"
   fi
-  if grep -qiE 'regressed=[1-9]' "$out"; then
-    fail "RED regressed a previously-passing test (regressed>0 in output.md)"
-  fi
+  printf '%s\n' "$test_rows" | grep -qiE '\|[[:space:]]*FAIL[[:space:]]*\|' \
+    || fail "no FAILing test row in the latest output.md block — RED produced no failing test"
+else
+  warn "latest output.md block has no recognizable test rows (path::fn); relying on cargo run"
+fi
+if printf '%s\n' "$block" | grep -qiE 'regressed=[1-9]'; then
+  fail "RED regressed a previously-passing test (regressed>0 in latest output.md block)"
 fi
 
 # 3) Diff scope: only test files + shim module.

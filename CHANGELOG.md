@@ -20,6 +20,32 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.7.0] - 2026-06-13
+
+### Changed
+- **init.md/output.md are now a story-bound, append-only comms channel — and it is
+  enforced.** Previously: per-attempt directories, the worker agent defs never even
+  mentioned `output.md`, and `validate_agent_io` skipped silently when `ATTEMPT_DIR`
+  was unset (so agents wrote nothing and gates passed). Now:
+  - One `init.md` + `output.md` pair **per story** (`sN-NN-<slug>/`), each opening with a
+    single `type: init|output` frontmatter. Every dispatch/attempt across a story's
+    RED → SCAFFOLD → GREEN → structural-review (+ retries) **appends** a block headed
+    `## <task> · attempt N · <role> · <ts>` — the full inter-agent negotiation history,
+    read top-to-bottom. No per-attempt dirs; nothing is rewritten.
+  - **Enforced** by `validate_comms` (`_gatelib.sh`), called by the red/scaffold/green/
+    structural gates: BLOCKS (exit 2, no more WARN-and-skip) unless `STORY_DIR` is set and
+    the latest `output.md` block is present, from the dispatched role, and carries
+    `### Summary`/`### Result`/`### Next`. `gate-red-verify` parses only the latest block.
+  - Every execution agent def (`red/green/scaffolder/structural-reviewer`) now carries the
+    contract: read your `init.md` block, append your `output.md` block, run `selfcheck`.
+  - `gate-validate-artifact` validates only the static top frontmatter of init.md/output.md
+    (md-db can't enumerate the dynamic blocks); the blocks are grep-checked.
+  - `task.env` contract: `ATTEMPT_DIR` → `STORY_DIR` (absolute path to the story dir).
+
+### Fixed
+- `changed_paths` (RED/GREEN diff-scope) now excludes `docs/agents/**`, so an agent
+  writing its `output.md` comms block is no longer flagged as an out-of-scope source edit.
+
 ## [0.6.0] - 2026-06-13
 
 ### Added

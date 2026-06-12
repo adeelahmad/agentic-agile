@@ -9,6 +9,9 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$HERE/_gatelib.sh"
 
+# Comms: the reviewer must have appended its findings block to the story's output.md.
+validate_comms
+
 root="$(repo_dir)"
 
 if have_ctx_symbols; then

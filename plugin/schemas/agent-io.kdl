@@ -1,8 +1,17 @@
 // agent-io.kdl — the inter-agent comms channel (init.md <-> output.md)
-// Validate: md-db validate <attempt-dir> --schema schemas/agent-io.kdl --users users.yaml
-// init.md   = orchestrator's contract TO a worker   (read-only to the worker)
-// output.md = worker's structured result BACK        (the worker writes this)
-// (This is the channel the earlier draft called "instructions"; filename is init.md.)
+//
+// STORY-BOUND and APPEND-ONLY. Both files live in the story dir (sN-NN-<slug>/) and open
+// with ONE frontmatter; every dispatch/attempt APPENDS a block:
+//     ## <task> · attempt N · <role> · <ISO8601>
+// init.md   = supervisor's contract TO each agent  (one block per dispatch)
+// output.md = each agent's structured result BACK   (one block per attempt)
+//
+// VALIDATION SPLIT: md-db validates the static top frontmatter only (`type: init|output`);
+// the dynamic `##` blocks CANNOT be md-db-enumerated, so block presence + structure (latest
+// block is the dispatched role's, with ### Summary/### Result/### Next) is enforced by
+// `validate_comms` in bin/_gatelib.sh (grep), called by every worker gate at SubagentStop.
+// The `field`/`section` definitions below document the per-BLOCK shape (reference for the
+// grep gate + the agents), not a whole-file md-db contract.
 
 relation "instructs"     inverse="instructed_by" cardinality="one"   // init -> output
 relation "for_task"      cardinality="one"                           // doc -> task id

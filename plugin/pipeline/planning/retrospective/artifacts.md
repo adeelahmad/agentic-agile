@@ -2,7 +2,7 @@
 
 READS
 - the global transcripts (global.jsonl + per-task transcripts)
-- docs/agents/sprint*/**/attempt-*/{init.md,output.md}   (feedback + findings)
+- docs/agents/sprint*/sN-NN-*/{init.md,output.md}   (feedback + findings)
 - docs/agents/sprint*/execution.log                       (escalations, halts)
 
 WRITES

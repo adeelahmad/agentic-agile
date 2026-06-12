@@ -27,4 +27,4 @@ it remembers.
 - Patterns, not one-offs. A single fluke is not a memory.
 
 ## Tools
-read (transcripts, attempt dirs, execution.log), write (candidate list only)
+read (transcripts, story init.md/output.md, execution.log), write (candidate list only)

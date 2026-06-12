@@ -12,7 +12,7 @@ Transcripts hooks (`transcripts`) ALWAYS exit `0` — they must never block an a
 ## Per-task contract
 Gates read `.agentic/task.env` (the supervisor writes it into each worktree at
 dispatch): `TASK_ID, ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF,
-ATTEMPT_DIR, AGENTIC_TRANSCRIPTS_DIR`. Real env overrides. A missing backend (md-db /
+STORY_DIR, AGENTIC_TRANSCRIPTS_DIR`. Real env overrides. A missing backend (md-db /
 ctx-symbols) → WARN + grep fallback; never a silent pass.
 
 ## Gates (which hook fires each)
@@ -21,10 +21,10 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 | gate-supervisor-scope     | PreToolUse · Write\|Edit\|MultiEdit | supervisor writes only docs/agents/** while a sprint is live this session (session-scoped self-arming lock); workers exempt | supervisor writes production source mid-sprint |
 | gate-tooling              | SubagentStart · exec roles + supervisor self-check | md-db + ctx-symbols on PATH (execution may not run grep-degraded) | a backend is missing |
 | gate-validate-artifact    | PostToolUse · Write         | md-db-validate the written artifact | artifact malformed |
-| gate-red-verify           | SubagentStop · red-worker   | worktree-isolated; every new test FAILS BY ASSERTION; no regression; diff = tests+shims | shared-tree run / a new test passes / prod code / regression |
-| gate-scaffold-verify      | SubagentStop · scaffolder   | worktree-isolated; one def per symbol (`.agentic/scaffold-symbols`); panic+TODO; no marked shim; no clobber | shared-tree run / impl body / dup / shim remains |
-| gate-green-verify         | SubagentStop · green-worker | worktree-isolated; tests pass; in-scope diff; standards matrix; zero suppressions | shared-tree run / failing test / out-of-scope / suppression |
-| gate-structural-integrity | SubagentStop · structural-reviewer | orphan/parallel/duplicate via ctx-symbols | foundation-poisoning finding |
+| gate-red-verify           | SubagentStop · red-worker   | worktree-isolated; appended output.md block (validate_comms); every new test FAILS BY ASSERTION; no regression; diff = tests+shims | no/stale output.md block / shared-tree run / a new test passes / prod code / regression |
+| gate-scaffold-verify      | SubagentStop · scaffolder   | worktree-isolated; appended output.md block; one def per symbol (`.agentic/scaffold-symbols`); panic+TODO; no marked shim; no clobber | no/stale output.md block / shared-tree run / impl body / dup / shim remains |
+| gate-green-verify         | SubagentStop · green-worker | worktree-isolated; appended output.md block; tests pass; in-scope diff; standards matrix; zero suppressions | no/stale output.md block / shared-tree run / failing test / out-of-scope / suppression |
+| gate-structural-integrity | SubagentStop · structural-reviewer | appended output.md block; orphan/parallel/duplicate via ctx-symbols | no/stale output.md block / foundation-poisoning finding |
 | gate-final                | SubagentStop · final-gate   | full matrix; zero suppressions; all plan-ready ticked | matrix red / suppression / unticked |
 | gate-standards-cited      | SubagentStop · standards    | standards.md citations resolve | dangling citation |
 | gate-stage2-complete      | supervisor self-check       | every story Stage-2 valid; no TBW | incomplete planning |

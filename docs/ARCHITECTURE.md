@@ -161,16 +161,17 @@ docs/agents/
       tasks.md  validate.md     story decomposition + rubric      (planner)
       plan.md                   tests-only plan                   (planner)
       plan-ready.md             RED->GREEN static handoff         (supervisor, once; ticked on GREEN pass)
-      T<k>/                     one dir per task
-        attempt-1/
-          init.md               contract + scaffold log + feedback (supervisor/scaffolder; read-only to worker)
-          output.md             the worker's report                (worker)
-        attempt-2/ ...          one dir per retry
+      init.md                   APPEND-ONLY inbound comms — one block per dispatch  (supervisor)
+      output.md                 APPEND-ONLY outbound comms — one block per attempt  (the agent)
 ```
 
-- **Per-task retry budget** = the number of `attempt-K/` dirs for that task. The
-  counter is PER-TASK and resets per task (each task has its own `attempt-*` series),
-  which is why a long run of healthy waves can't trip "retries exhausted." [resolves
+- init.md/output.md are the STORY's append-only comms channel (story-bound, not
+  per-attempt dirs). Each block is headed `## <task> · attempt N · <role> · <ts>`;
+  `validate_comms` (in `_gatelib.sh`, called by every worker gate) BLOCKS unless the
+  agent appended a well-formed latest block.
+- **Per-task retry budget** = the number of that task's `output.md` blocks for the role
+  (the `attempt N` counter). The counter is PER-TASK and resets per task, which is why a
+  long run of healthy waves can't trip "retries exhausted." [resolves
   OPEN-4 toward per-task dirs]
 - `init.md` is append-only and turn-counted (`attempt` field). Writers: supervisor
   (contract + feedback) and scaffolder (the create/update/delete scaffold log). The

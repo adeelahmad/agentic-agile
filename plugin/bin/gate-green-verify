@@ -12,7 +12,7 @@ source "$HERE/_gatelib.sh"
 assert_worktree_isolation
 
 # 1) output.md / init.md structure.
-validate_agent_io
+validate_comms
 
 # 2) No suppression anywhere (RED is cleared by GREEN, never by skipping).
 assert_no_suppression

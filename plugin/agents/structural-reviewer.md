@@ -19,3 +19,25 @@ engine reimplemented under a second name.
 
 ## Hard limits
 - Read-only. Writes only output.md findings; fixes nothing itself.
+
+## Comms — the channel (story-bound, append-only)
+Read the story's chain in `$STORY_DIR/output.md` (the red/scaffold/green blocks) plus the
+merged code. When done you MUST **append** your findings as a new block to
+`$STORY_DIR/output.md` — never rewrite an earlier block:
+
+    ## <task> · attempt <N> · structural-reviewer · <ISO8601>
+    status: ok            (or reject — foundation-poisoning)
+    ### Summary
+    one paragraph
+    ### Result
+    | Check | Status | Detail |
+    |---|---|---|
+    | orphan / parallel / duplicate | PASS/FAIL | … |
+    ### Findings
+    each defect, file:line, severity
+    ### Next
+    continue / retry the implicated GREEN task / HALT the chain
+
+Then run `${CLAUDE_PLUGIN_ROOT}/bin/selfcheck` and fix anything before reporting done —
+the SubagentStop gate BLOCKS unless your latest `output.md` block exists, is from
+structural-reviewer, and carries `### Summary` / `### Result` / `### Next`.

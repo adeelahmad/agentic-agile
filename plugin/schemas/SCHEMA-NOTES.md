@@ -1,8 +1,10 @@
 # schema notes
 
 ## Three schemas, three scopes
-- agent-io.kdl          per-task-attempt comms channel (init.md, output.md). NEW
-                        artifacts, fixed sections -> FULLY md-db-validated.
+- agent-io.kdl          story-bound, APPEND-ONLY comms channel (init.md, output.md).
+                        md-db validates the static top frontmatter; the dynamic
+                        `## <task> · attempt N · <role> · <ts>` blocks are grep-checked
+                        by `validate_comms` (md-db can't enumerate dynamic sections).
 - planning-artifacts.kdl the playbook's stories/tasks/validate/plan/plan-ready/
                         sprint-plan. md-db validates frontmatter + fixed sections.
 - ledger.kdl            execution.log line ledger. Line format enforced by bin/.

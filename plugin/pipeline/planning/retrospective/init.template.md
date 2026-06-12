@@ -19,7 +19,7 @@ Edit code, plans, or memory.md directly; relax any invariant.
 
 # Inputs
 - <transcripts store> (global global.jsonl + per-task transcripts)
-- docs/agents/sprint*/**/attempt-*/   (feedback + findings)
+- docs/agents/sprint*/sN-NN-*/   (init.md/output.md comms + findings)
 
 # Acceptance
 Each candidate is 1-2 lines, role-tagged, recurrence >= 2 (or a human keep), and

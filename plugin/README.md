@@ -71,7 +71,7 @@ default matrix in `bin/_gatelib.sh`.
 ### Gate contract (env the supervisor sets per dispatch)
 
 All optional, each with a safe fallback (see `bin/_gatelib.sh`):
-`ATTEMPT_DIR`, `REPO_DIR`, `STANDARDS_FILE`, `BASE_REF`, `TEST_GLOBS`,
+`STORY_DIR`, `REPO_DIR`, `STANDARDS_FILE`, `BASE_REF`, `TEST_GLOBS`,
 `SCOPE_GLOBS`, `SCAFFOLD_SYMBOLS`, `GATE_RUN_TESTS`, `GATE_RUN_MATRIX`.
 
 ## What's in here

@@ -6,7 +6,9 @@
 # has a safe fallback so a gate degrades to a WARN rather than a false pass.
 #
 # Contract (supervisor-set; all optional, with fallbacks):
-#   ATTEMPT_DIR     dir holding this attempt's init.md + output.md
+#   STORY_DIR       absolute path to the story dir holding the append-only init.md +
+#                   output.md comms (docs/agents/sprintN/sN-NN-<slug>/). REQUIRED for
+#                   worker gates — validate_comms BLOCKS if unset.
 #   REPO_DIR        worktree root with source + tests        (default: git toplevel or PWD)
 #   STANDARDS_FILE  path to standards.md (the gate matrix)   (default: auto-discovered)
 #   BASE_REF        git ref to diff scope against            (default: working-tree diff)
@@ -31,7 +33,7 @@ repo_dir() {
 }
 
 # Per-worktree task contract the supervisor writes at dispatch (.agentic/task.env):
-# TASK_ID, ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF, ATTEMPT_DIR,
+# TASK_ID, ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF, STORY_DIR,
 # AGENTIC_TRANSCRIPTS_DIR. Real env still overrides (load is non-clobbering only for unset).
 load_task_env() {
   local te; te="$(repo_dir)/.agentic/task.env"
@@ -41,33 +43,56 @@ load_task_env() {
 }
 load_task_env
 
-# Find an artifact file by name, preferring $ATTEMPT_DIR.
-find_in_attempt() {
-  local name="$1"
-  if [ -n "${ATTEMPT_DIR:-}" ] && [ -f "$ATTEMPT_DIR/$name" ]; then
-    echo "$ATTEMPT_DIR/$name"; return 0
+# Story-bound, append-only inter-agent comms (init.md <-> output.md) — THE channel,
+# not a throwaway. Per story: the supervisor APPENDS one block to init.md per dispatch
+# (the contract/feedback it sends the agent); the agent APPENDS one block to output.md
+# per attempt (its report back). A later agent in the chain reads the prior blocks.
+# Block header: `## <task> · attempt <N> · <role> · <ISO8601>`; sub-sections are `###`.
+#
+# ENFORCED, not advisory: a dispatched role MUST leave a well-formed latest output.md
+# block from itself — missing STORY_DIR, missing output.md, a stale last block, or a
+# missing required sub-section all BLOCK (exit 2). md-db still validates the static top
+# frontmatter; the dynamic `##` blocks are grep-checked (md-db can't enumerate them).
+validate_comms() {
+  local dir="${STORY_DIR:-${1:-}}"
+  [ -n "$dir" ] || fail "STORY_DIR unset — cannot find the story's comms (init.md/output.md). The supervisor must set STORY_DIR in .agentic/task.env (absolute path to docs/agents/sprintN/sN-NN-<slug>/)."
+  local out="$dir/output.md" ini="$dir/init.md"
+
+  # init.md: the supervisor's inbound contract must exist (this is how you were briefed).
+  [ -f "$ini" ] || fail "no init.md in $dir — the supervisor must APPEND a dispatch block to the story's init.md before dispatch."
+  frontmatter_type "$ini" init || fail "init.md missing top frontmatter 'type: init'"
+
+  # output.md: the agent must have appended its report block.
+  [ -f "$out" ] || fail "no output.md in $dir — APPEND your report block to the story's output.md. This is the comms channel between agents, not optional."
+  frontmatter_type "$out" output || fail "output.md missing top frontmatter 'type: output'"
+
+  # The LAST appended block must be THIS dispatch's (role match) and well-formed.
+  local last; last="$(awk '/^## /{n=NR} END{print n+0}' "$out")"
+  [ "${last:-0}" -gt 0 ] || fail "output.md has no '## <task> · attempt N · <role> · <ts>' block — append your report."
+  local block; block="$(awk -v s="$last" 'NR>=s' "$out")"
+  if [ -n "${AGENT_ROLE:-}" ]; then
+    printf '%s\n' "$block" | head -1 | grep -q "$AGENT_ROLE" \
+      || fail "the latest output.md block is not from '$AGENT_ROLE' — append YOUR report block for this dispatch (one block per attempt, append-only)."
   fi
-  return 1
+  printf '%s\n' "$block" | grep -qE '^###[[:space:]]*Summary' || fail "latest output.md block missing '### Summary'"
+  printf '%s\n' "$block" | grep -qE '^###[[:space:]]*Result'  || fail "latest output.md block missing '### Result'"
+  printf '%s\n' "$block" | grep -qE '^###[[:space:]]*Next'    || fail "latest output.md block missing '### Next'"
+  note "comms ok: latest output.md block is a well-formed '$AGENT_ROLE' report in $(basename "$dir")"
 }
 
-# Validate an attempt dir's .md against agent-io.kdl via md-db; WARN-fallback if absent.
-validate_agent_io() {
-  local dir="${1:-${ATTEMPT_DIR:-}}"
-  [ -z "$dir" ] && { warn "no ATTEMPT_DIR; skipping md-db validation"; return 0; }
-  if command -v md-db >/dev/null 2>&1; then
-    md-db validate "$dir" --schema "${CLAUDE_PLUGIN_ROOT}/schemas/agent-io.kdl" \
-      || fail "md-db: $dir failed agent-io.kdl"
-  else
-    warn "md-db absent; init.md/output.md structure UNVALIDATED (weaker check)"
-    # Minimal fallback: output.md must at least exist and carry required sections.
-    local out="$dir/output.md"
-    [ -f "$out" ] || fail "output.md missing in $dir"
-    grep -q '^#\+ *Result' "$out"  || fail "output.md missing # Result section"
-    grep -q '^#\+ *Summary' "$out" || fail "output.md missing # Summary section"
-    # type: must live INSIDE the frontmatter block (between the first two --- lines).
-    awk 'NR==1&&/^---/{f=1;next} f&&/^---/{exit} f' "$out" | grep -qE '^type:[[:space:]]*output' \
-      || fail "output.md frontmatter missing 'type: output'"
-  fi
+# True if $1 opens with YAML frontmatter carrying `type: $2`. md-db validates this
+# region too (it is the static, single-frontmatter part of the append-only file).
+frontmatter_type() {
+  awk 'NR==1&&/^---/{f=1;next} f&&/^---/{exit} f' "$1" | grep -qiE "^type:[[:space:]]*$2([[:space:]]|$)"
+}
+
+# Echo the LATEST `## ...` block (its header line → EOF) of an append-only comms file.
+# Gates that parse a worker's report (e.g. RED's Result table) must read only the most
+# recent block, not the whole accumulated history. Returns the whole file if no block.
+latest_block() {
+  local f="$1"; [ -f "$f" ] || return 1
+  local s; s="$(awk '/^## /{n=NR} END{print n+0}' "$f")"
+  if [ "${s:-0}" -gt 0 ]; then awk -v s="$s" 'NR>=s' "$f"; else cat "$f"; fi
 }
 
 # True if ctx-symbols is available.
@@ -87,7 +112,7 @@ symbol_count() {
 
 # Build artifacts that are never "worker edits" — excluded from diff-scope checks.
 # `|| true` so an all-artifacts diff (grep -v matches nothing) is success, not exit 1.
-changed_paths_filter() { grep -vE '(^|/)(target/|Cargo\.lock$|\.git/|\.agentic/)' || true; }
+changed_paths_filter() { grep -vE '(^|/)(target/|Cargo\.lock$|\.git/|\.agentic/|docs/agents/)' || true; }
 
 # Changed paths in REPO_DIR (one per line). Uses BASE_REF if set, else working tree.
 changed_paths() {

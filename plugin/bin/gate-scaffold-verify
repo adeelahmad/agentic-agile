@@ -11,6 +11,9 @@ source "$HERE/_gatelib.sh"
 # 0) Worktree isolation (invariant): this worker must run in a linked worktree.
 assert_worktree_isolation
 
+# 0b) Comms: this agent must have appended its report block to the story's output.md.
+validate_comms
+
 root="$(repo_dir)"
 have_ctx_symbols || warn "ctx-symbols absent; using grep fallback for uniqueness (fragile)"
 

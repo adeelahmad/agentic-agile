@@ -26,7 +26,7 @@ flowchart TD
 
   subgraph EXEC["EXECUTION - autonomous, hook-enforced, per wave (one worktree per task)"]
     direction TB
-    INIT["attempt-K / init.md<br/>contract + Memory + feedback"]
+    INIT["story init.md (append-only)<br/>contract + Memory + feedback block per dispatch"]
     RED["RED<br/>tests vs shims (fail by assertion)"]
     GRED{"gate-red-verify"}
     SCAF["scaffold<br/>idempotent, panic+TODO"]

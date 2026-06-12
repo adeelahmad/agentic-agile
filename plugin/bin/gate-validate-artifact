@@ -13,7 +13,16 @@ fi
 [ -z "$f" ] && exit 0
 
 case "$(basename "$f")" in
-  init.md|output.md) schema=agent-io.kdl ;;
+  init.md|output.md)
+    # Append-only comms: the dynamic `## <task> · attempt N · <role> · <ts>` blocks
+    # cannot be md-db-enumerated, so here we validate only the static top frontmatter;
+    # block structure is grep-checked by validate_comms at SubagentStop.
+    [ -f "$f" ] || exit 0
+    head -1 "$f" | grep -q '^---' \
+      || { echo "BLOCK[gate-validate-artifact]: $f missing top YAML frontmatter ('--- type: init|output ---')" >&2; exit 2; }
+    awk 'NR==1&&/^---/{g=1;next} g&&/^---/{exit} g' "$f" | grep -qiE '^type:[[:space:]]*(init|output)([[:space:]]|$)' \
+      || { echo "BLOCK[gate-validate-artifact]: $f frontmatter 'type:' must be init or output" >&2; exit 2; }
+    exit 0 ;;
   stories.md|tasks.md|validate.md|plan.md|plan-ready.md) schema=planning-artifacts.kdl ;;
   *) exit 0 ;;
 esac

@@ -17,3 +17,24 @@ two green workers cannot create two divergent implementations.
 - No new tests; no refactor a test does not force.
 - Touches only files named in tasks.md (+ the RED test file, to drop shims).
 - Never reaches green by suppressing/weakening a test.
+
+## Comms — the channel (story-bound, append-only)
+Your brief is the LAST `## … · green-worker · …` block in `$STORY_DIR/init.md`; read the
+whole file plus the red-worker and scaffolder blocks in `$STORY_DIR/output.md` (what was
+tested, what was stubbed). When done you MUST **append** your report as a new block to
+`$STORY_DIR/output.md` — never rewrite an earlier block:
+
+    ## <task> · attempt <N> · green-worker · <ISO8601>
+    status: ok            (or retry|escalate)
+    ### Summary
+    one paragraph
+    ### Result
+    | Check | Status | Detail |
+    |---|---|---|
+    | `path::test_fn` | PASS | green |
+    ### Next
+    structural review / next task
+
+Then run `${CLAUDE_PLUGIN_ROOT}/bin/selfcheck` and fix anything before reporting done —
+the SubagentStop gate BLOCKS unless your latest `output.md` block exists, is from
+green-worker, and carries `### Summary` / `### Result` / `### Next`.

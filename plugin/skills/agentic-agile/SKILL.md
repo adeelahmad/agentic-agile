@@ -231,33 +231,41 @@ docs/agents/
     sN-NN-<slug>/
       tasks.md validate.md plan.md               (planner)
       plan-ready.md                              (you; ticked ONLY on GREEN pass)
-      T<k>/                                      one dir per task
-        attempt-1/
-          init.md      contract + # Memory + scaffold log + feedback  (you/scaffolder; read-only to worker)
-          output.md    the worker's report                            (worker writes)
-        attempt-2/ …    one dir per retry
+      init.md      APPEND-ONLY inbound comms — one block per dispatch (you append)
+      output.md    APPEND-ONLY outbound comms — one block per attempt (the agent appends)
+
+  # init.md/output.md are the STORY's comms channel — story-bound, NOT per-attempt dirs.
+  # Every task's RED→SCAFFOLD→GREEN(+retries) and structural-review append blocks to the
+  # same pair. Each block is headed `## <task> · attempt N · <role> · <ISO8601>`; the file
+  # opens with one `--- type: init|output · story: SN-NN ---` frontmatter. Read top-down =
+  # the full negotiation history. This is how agents communicate across the chain.
 
 per worktree (transient, git-ignored, removed on stop):
   .agentic/task.env        the per-task contract you write at dispatch (TASK_ID,
                            ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF,
-                           AGENTIC_TRANSCRIPTS_DIR) — the gates read this
+                           STORY_DIR, AGENTIC_TRANSCRIPTS_DIR) — the gates read this.
+                           STORY_DIR is the ABSOLUTE path to sN-NN-<slug>/ (the comms dir).
   .agentic/scaffold-symbols  scaffolder-written production-symbol list (scaffold gate)
   .transcripts/            READ-ONLY task transcript staged in for the worker
 ```
 
 ### Writer rules (who writes what)
 
-- `init.md` — **you** write it before each dispatch; **append-only**, with an
-  `attempt:` field that is the turn count. On a re-spawn, append a `# Feedback`
-  section derived from the prior `output.md` (what was wrong, what to fix, what
-  NOT to touch). The scaffolder appends `# Scaffold` lines. The worker only reads
-  it. It POINTS at `plan-ready.md`; it never copies the spec. Inject a `# Memory`
-  section = the `memory.md` entries tagged for this role or `all` (top ~7 by
-  recurrence/recency). At dispatch you also write the worktree's `.agentic/task.env`
-  (the gate contract) and `bin/transcripts stage-in` stages the read-only `.transcripts/`.
-- `output.md` — the **worker** writes it: `# Summary`, a `# Result` table
-  (per-check Check/Status/Detail), `# Findings`, `# Next`, plus `status` and
-  `diff_files`. A **fresh `output.md` per attempt dir** (no append race).
+- `init.md` (story-bound, **append-only**) — **you** APPEND one block per dispatch:
+  `## <task> · attempt N · <role> · <ts>`, then `### Mandate / ### Scope (May / May Not)
+  / ### Inputs / ### Acceptance`, plus a `### Memory` block (the `memory.md` entries
+  tagged for this role or `all`, top ~7) and — on a re-spawn — a `### Feedback` block
+  derived from the prior `output.md`. It POINTS at `plan-ready.md`; never copies the
+  spec. NEVER rewrite an earlier block. The file opens once with `--- type: init ---`.
+  At dispatch you also write the worktree's `.agentic/task.env` (with `STORY_DIR` =
+  absolute path to this story dir) and `bin/transcripts stage-in` stages `.transcripts/`.
+- `output.md` (story-bound, **append-only**) — the **agent** APPENDS one block per
+  attempt: `## <task> · attempt N · <role> · <ts>`, `status:`, then `### Summary`, a
+  `### Result` table (Check/Status/Detail), optional `### Findings`/`### Scaffold`, and
+  `### Next`. A fresh BLOCK per attempt appended to the one file — never a rewrite of an
+  earlier block. **Enforced:** every worker gate runs `validate_comms`, which BLOCKS
+  unless the latest `output.md` block is present, from the dispatched role, and
+  well-formed. This is the inter-agent channel, not an optional artifact.
 - `plan-ready.md` — **you** write it once per story after RED is verified; tick a
   box `[ ]→[x]` ONLY when that task's GREEN gate passes. A re-spawn (on fail)
   always precedes ticking, so there is no partial-tick race.
@@ -267,22 +275,24 @@ per worktree (transient, git-ignored, removed on stop):
 
 ### Per-task retry budget (corrections §12 + OPEN-4/6)
 
-The budget is **per task**: it is the count of `attempt-K/` dirs for that task,
-and it **resets per task**. Default **MAX = 3 attempts** before you stop the
-inner loop and apply escalation (below). A long run of healthy waves can never
-trip "retries exhausted" because there is no cross-wave accumulation.
+The budget is **per task**: it is the count of that task's `output.md` blocks for the
+current role (the `attempt N` counter in the block header), and it **resets per task**.
+Default **MAX = 3 attempts** before you stop the inner loop and apply escalation (below).
+A long run of healthy waves can never trip "retries exhausted" because there is no
+cross-wave accumulation.
 
 ## The feedback loop (exactly)
 
 For each task attempt:
 
-1. You write `T<k>/attempt-K/init.md` and dispatch the matching `subagent_type`
-   for that `task_id` (worktree).
-2. The worker reads `init.md`, does the work, writes `output.md`.
+1. You APPEND a dispatch block to the story's `init.md` and dispatch the matching
+   `subagent_type` for that `task_id` (worktree), with `STORY_DIR` set in `task.env`.
+2. The agent reads its block in `init.md` (+ the chain so far in `output.md`), does the
+   work, and APPENDS its report block to the story's `output.md`.
 3. On SubagentStop the platform runs the matching gate (`hooks.json`). **exit 0**
    → continue. **exit 2** → the stop is blocked and stderr is handed to you.
-4. You read the structured reason + the worker's `output.md` Result table. If
-   within budget, write `attempt-(K+1)/init.md` with a `# Feedback` section and
+4. You read the structured reason + the latest `output.md` block. If within budget,
+   APPEND an `attempt N+1` block to `init.md` with a `### Feedback` section and
    re-dispatch the SAME role for the SAME task. Else escalate.
 
 The hook guarantees "you cannot pass a failed gate." You own the
@@ -312,8 +322,8 @@ before GREEN).
   tests reference, create the canonical stub **once** (signature inferred from the
   test call; body = `panic("SUB-AGENT-TODO: <recipe>")`). Delete the marked shim
   files (`// agentic:shim`) and write the stubbed production symbols, one per line, to
-  `.agentic/scaffold-symbols`. Append each create/update/delete to `init.md` `# Scaffold`
-  and to `execution.log`.
+  `.agentic/scaffold-symbols`. Append each create/update/delete to its `output.md` block
+  (under `### Scaffold`) and to `execution.log`.
 - **Idempotent**: stub only symbols that do not yet exist; NEVER clobber a symbol
   that already has a real (non-panic) body from an earlier wave's GREEN.
 - SubagentStop → `gate-scaffold-verify`: each referenced symbol defined **exactly
@@ -381,8 +391,8 @@ start the next wave's RED, or if this was the last wave, FINAL-GATE.
 - **budget / no-progress** → hard stop.
 
 All escalations RE-ENTER at the **planner** at the next planning session — NOT a
-full re-intake. Context preserved = `execution.log` + the failed task's
-`attempt-*/` history. The human amends and re-runs. The inner revision loop and
+full re-intake. Context preserved = `execution.log` + the story's `init.md`/`output.md`
+comms history. The human amends and re-runs. The inner revision loop and
 the outer to-planning escalation are the same mechanism at two scales:
 escalation is what happens when revision is exhausted.
 
@@ -495,9 +505,10 @@ source of truth the gate uses, so first-pass blocks become rare.
 
 ## The per-worktree contract (.agentic/task.env)
 At dispatch, write `.agentic/task.env` into the worktree with `TASK_ID`, `ATTEMPT`,
-`AGENT_ROLE`, `SCOPE_GLOBS` (GREEN diff-scope), `SCAFFOLD_SYMBOLS` (or write
+`AGENT_ROLE`, `STORY_DIR` (absolute path to the story dir — where `validate_comms` reads
+init.md/output.md), `SCOPE_GLOBS` (GREEN diff-scope), `SCAFFOLD_SYMBOLS` (or write
 `.agentic/scaffold-symbols`), `BASE_REF` (diff base), and `AGENTIC_TRANSCRIPTS_DIR`. The gate
-library sources it, so the gates check the RIGHT task's scope/symbols — not
+library sources it, so the gates check the RIGHT task's scope/symbols/comms — not
 auto-discovered guesses.
 
 ## Reference
