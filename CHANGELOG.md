@@ -20,6 +20,17 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.7.1] - 2026-06-13
+
+### Changed
+- `SKILL.md`: made it explicit that the supervisor **dispatches the `planner` agent** to
+  author Stage-2 (`stories`/`tasks`/`validate`/`plan`/`sprint-plan`) — it does NOT
+  hand-write them inline (same anti-pattern as hand-writing code). Added a hard guardrail,
+  prefaced the five planning steps with "dispatch the planner, one sprint at a time", and
+  scoped execution to ONE sprint per autonomous run (stop at its final gate; the human
+  decides the next sprint — no Sprint N → N+1 sweeps, no crossing planning→execution
+  without an explicit "go").
+
 ## [0.7.0] - 2026-06-13
 
 ### Changed

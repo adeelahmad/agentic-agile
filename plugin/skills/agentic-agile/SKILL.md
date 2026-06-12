@@ -53,6 +53,15 @@ doc). It folds the structural-review corrections directly into the process.
   dispatch the matching worker (`red-worker` / `scaffolder` / `green-worker`). This
   is enforced: a `PreToolUse` gate (`bin/gate-supervisor-scope`) blocks supervisor
   writes to anything outside `docs/agents/**` once a sprint is live this session.
+- **You NEVER hand-author planning artifacts either — you DISPATCH the planning
+  activities.** `stories.md`, `tasks.md`, `validate.md`, `plan.md`, and `sprintN/plan.md`
+  are written by the **`planner`** agent; intake by **`intake`**; `standards.md` by
+  **`standards`**; the retrospective by **`archivist`**. When Stage-2 is `TBW`, the
+  answer is "dispatch the planner for that sprint," NOT "I'll write them all first."
+  Hand-writing the planner's artifacts inline is the same bypass as hand-writing code.
+  You orchestrate and review; you own only `plan-ready.md`, `execution.log`, the
+  `init.md` dispatch blocks, and curated `memory.md` — the five Stage-2 steps are the
+  planner's job.
 - **Ambiguous resume words bind to the pipeline, not to shortcuts.** If the human
   says "go on", "continue", "proceed", "go", or "yes" after a dispatch or interrupt,
   it means *resume the LAST activity / continue the playbook exactly as written* —
@@ -153,7 +162,8 @@ A sprint may sit at Stage 1 indefinitely (roadmap planning).
 
 ## Stage 2 — full plan (mandatory before a sprint enters RED)
 
-For every story, in dependency order (cheapest first):
+Authored by the **`planner`** agent (you dispatch it), per story, in dependency order
+(cheapest first) — not hand-written by you:
 
 ```
 docs/agents/sprintN/sN-NN-<slug>/
@@ -165,6 +175,12 @@ docs/agents/sprintN/sN-NN-<slug>/
 ```
 
 ## The five planning steps (in order)
+
+**You DISPATCH the `planner` agent to author all five — you do not write them inline.**
+One `planner` dispatch per sprint's Stage-2 (or per story for a large sprint). Plan ONE
+sprint at a time: dispatch the planner, review its output, present it for the human's
+approval, then — only on "go" — start that sprint's execution. Do NOT batch-write every
+future sprint's Stage-2 and chain straight into execution.
 
 1. **stories.md** — the contract. Every story carries the five-part Intent
    (What's wanted · Constraints · Failure scenarios · Success scenarios ·
@@ -402,6 +418,11 @@ escalation is what happens when revision is exhausted.
   clarify/conflict/re-plan loops are human-bounded.
 - EXECUTION is an autonomous run ("run until the sprint gate is green") and takes
   no mid-run human input by design.
+- **ONE sprint per autonomous run.** Execution is scoped to a single sprint — its
+  FINAL-GATE is the finish line. When it passes, STOP and report; the human decides
+  whether to start the next sprint, which RE-ENTERS interactive planning (dispatch the
+  planner for it). Never chain Sprint N → N+1 execution in one sweep, and never cross the
+  planning→execution boundary without the human's explicit "go".
 
 ## Anti-patterns (reject the sub-agent's output)
 
