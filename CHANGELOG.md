@@ -20,6 +20,17 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.8.2] - 2026-06-13
+
+### Fixed
+- **Nested worktrees.** `worktree-create` anchored the new worktree to the dispatch
+  `cwd`, so a dispatch from *inside* a worktree created a worktree nested under it
+  (`…/worktrees/A/.agentic/worktrees/B/…`) — which compounds and breaks Wave
+  consolidation. It now resolves the MAIN working tree (first entry of `git worktree
+  list`, regardless of the nested `cwd`) and creates every worktree as a flat sibling
+  under `<main>/.agentic/worktrees/`, off the main tree's HEAD. `base_path` from the
+  payload is no longer used for placement (it could be nested).
+
 ## [0.8.1] - 2026-06-13
 
 ### Fixed
