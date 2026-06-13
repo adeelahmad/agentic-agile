@@ -18,7 +18,7 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 ## Gates (which hook fires each)
 | script | event · matcher | checks | exit 2 when |
 |--------|-----------------|--------|-------------|
-| gate-supervisor-scope     | PreToolUse · Write\|Edit\|MultiEdit | supervisor writes only docs/agents/** while a sprint is live this session (session-scoped self-arming lock); workers exempt | supervisor writes production source mid-sprint |
+| gate-supervisor-scope     | PreToolUse · Write\|Edit\|MultiEdit | MAIN agent (no `agent_type`) may not write production source mid-sprint, nor hand-author planning artifacts (stories/tasks/validate/plan/intake/standards.md — dispatch the activity); sub-agents (`agent_type` present) exempt | supervisor writes source / hand-writes a planner-owned artifact |
 | gate-tooling              | SubagentStart · exec roles + supervisor self-check | md-db + ctx-symbols on PATH (execution may not run grep-degraded) | a backend is missing |
 | gate-validate-artifact    | PostToolUse · Write         | md-db-validate the written artifact | artifact malformed |
 | gate-red-verify           | SubagentStop · red-worker   | worktree-isolated; appended output.md block (validate_comms); every new test FAILS BY ASSERTION; no regression; diff = tests+shims | no/stale output.md block / shared-tree run / a new test passes / prod code / regression |

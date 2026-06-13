@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 # gate-supervisor-scope — PreToolUse(Write|Edit|MultiEdit|NotebookEdit).
 #
-# Enforces the playbook invariant: the SUPERVISOR never writes production source.
-# All code (tests, stubs, implementation) is written by a dispatched worker in its
-# own worktree (RED → SCAFFOLD → GREEN). The supervisor owns ONLY planning artifacts
-# under docs/agents/** (+ the .agentic/.transcripts worktree control files).
+# Enforces two playbook invariants on the MAIN agent (the supervisor):
+#   1. It never writes production source — code is written by a dispatched worker in
+#      its own worktree (RED → SCAFFOLD → GREEN).
+#   2. It never HAND-AUTHORS the planning artifacts — it DISPATCHES the activity:
+#      stories/tasks/validate/plan/sprint-plan ← planner · intake.md ← intake ·
+#      standards.md ← standards. (The supervisor kept hand-writing these despite the
+#      SKILL guardrail; this is the deterministic backstop.)
+# The supervisor owns only plan-ready.md, init.md, execution.log, memory.md.
+#
+# DISTINGUISHING supervisor from a dispatched sub-agent (per Claude Code hooks docs):
+#   PreToolUse carries `agent_type` for a sub-agent's tool call, and NOT for the main
+#   session. So a present agent_type ⇒ a dispatched agent doing its job ⇒ allow; an
+#   absent agent_type ⇒ the supervisor ⇒ bound by the rules below.
 #
 # WHY a self-arming, session-scoped lock (not "a sprint dir exists"):
 #   This plugin's hooks fire for EVERY session on the machine. Gating on the mere
@@ -32,20 +41,44 @@ case "$tool" in Write|Edit|MultiEdit|NotebookEdit) ;; *) exit 0 ;; esac
 # No session id => fail OPEN (don't risk blocking a non-agentic session).
 [ -n "$session" ] || exit 0
 
+# Dispatched sub-agent (planner / intake / standards / red / scaffolder / green / …):
+# agent_type is present ⇒ it is doing its designated job; its own SubagentStop gate
+# constrains it. Never block a sub-agent here.
+agent_type="$(field agent_type)"
+[ -n "$agent_type" ] && exit 0
+
 root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 lock="$root/docs/agents/.agentic/sprint.lock"   # under git-ignored .agentic/
 
-# Worker context: a dispatched worker's worktree carries .agentic/task.env with a
-# worker AGENT_ROLE (resolved from the worktree root, as _gatelib.sh does). Workers
-# are SUPPOSED to write code — never block them.
+# Fallback (only if a payload ever lacks agent_type): a worktree task.env naming a
+# dispatched role still exempts that agent.
 if [ -f "$root/.agentic/task.env" ] \
-   && grep -qE '^[[:space:]]*AGENT_ROLE=("?)(red-worker|scaffolder|green-worker)\1' "$root/.agentic/task.env" 2>/dev/null; then
+   && grep -qE '^[[:space:]]*AGENT_ROLE=("?)(red-worker|scaffolder|green-worker|planner|intake|standards|structural-reviewer|final-gate|archivist)\1' "$root/.agentic/task.env" 2>/dev/null; then
   exit 0
 fi
 
-# Classify the target path. Match relative AND absolute forms — do NOT prefix-strip
-# against $root: on macOS `git rev-parse --show-toplevel` resolves /private symlinks
-# and would not match the payload's /var path, silently disarming the guard.
+# ── MAIN AGENT (the supervisor) from here on ───────────────────────────────
+base="${file##*/}"
+
+# (A) Planning artifacts are authored by a DISPATCHED activity, never hand-written by
+# you. Path-based (fires even on the FIRST stories.md write, before any lock is armed).
+case "$file" in docs/agents/*|*/docs/agents/*)
+  case "$base" in stories.md|tasks.md|validate.md|plan.md|intake.md|standards.md)
+    echo "BLOCK[$GATE_NAME]: dispatch the planning activity — do not hand-write this artifact:" >&2
+    echo "    $file" >&2
+    echo "  This is authored by a sub-agent you DISPATCH, not by you:" >&2
+    echo "    stories/tasks/validate/plan/sprint-plan → the 'planner' agent" >&2
+    echo "    intake.md → 'intake'  ·  standards.md → 'standards'" >&2
+    echo "  Dispatch it (it writes the artifact); you review and approve the output. You own" >&2
+    echo "  only plan-ready.md / init.md / execution.log / memory.md." >&2
+    echo "  (Deliberate out-of-band edit outside the pipeline? Re-run with SKIP_HOOKS=1.)" >&2
+    exit 2 ;;
+  esac ;;
+esac
+
+# Classify the remaining target paths. Match relative AND absolute forms — do NOT
+# prefix-strip against $root: on macOS `git rev-parse --show-toplevel` resolves /private
+# symlinks and would not match the payload's /var path, silently disarming the guard.
 case "$file" in
   docs/agents/*|*/docs/agents/*)                 is_docs=1; is_ctl=0 ;;
   .agentic/*|*/.agentic/*|.transcripts/*|*/.transcripts/*) is_docs=0; is_ctl=1 ;;
@@ -55,7 +88,8 @@ case "$file" in
   *)                                             is_docs=0; is_ctl=0 ;;
 esac
 
-# Planning artifact: ARMS the lock for this session (a sprint is live here), allow.
+# Supervisor-owned planning artifact (init.md / plan-ready.md / execution.log /
+# memory.md): ARMS the lock for this session (a sprint is live here), allow.
 if [ "$is_docs" = 1 ]; then
   mkdir -p "$(dirname "$lock")" 2>/dev/null && printf '%s\n' "$session" > "$lock" 2>/dev/null || true
   exit 0

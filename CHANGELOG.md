@@ -20,6 +20,25 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.8.0] - 2026-06-13
+
+### Added
+- **Hard enforcement: the supervisor can no longer hand-write planning artifacts.** The
+  v0.7.1 SKILL text ("dispatch the planner") didn't hold — the supervisor kept writing
+  `stories.md`/`plan.md` itself. `gate-supervisor-scope` (PreToolUse) now BLOCKS the
+  **main agent** from writing `stories/tasks/validate/plan/intake/standards.md` under
+  `docs/agents/**` (the block message tells it to dispatch the `planner`/`intake`/
+  `standards` activity). A dispatched sub-agent is exempt — distinguished deterministically
+  by the `agent_type` field, which Claude Code includes in a sub-agent's PreToolUse
+  payload and omits for the main session (so no fragile sentinel is needed). Path-based,
+  so it fires on the very first `stories.md` write, before any sprint lock is armed.
+
+### Changed
+- `gate-supervisor-scope` now keys "is this the supervisor?" off the payload `agent_type`
+  (present ⇒ sub-agent ⇒ allow) rather than only the worktree `task.env` role, which also
+  hardens the existing no-supervisor-source rule. The supervisor still owns
+  `plan-ready.md` / `init.md` / `execution.log` / `memory.md`.
+
 ## [0.7.1] - 2026-06-13
 
 ### Changed

@@ -61,7 +61,10 @@ doc). It folds the structural-review corrections directly into the process.
   Hand-writing the planner's artifacts inline is the same bypass as hand-writing code.
   You orchestrate and review; you own only `plan-ready.md`, `execution.log`, the
   `init.md` dispatch blocks, and curated `memory.md` — the five Stage-2 steps are the
-  planner's job.
+  planner's job. **This is enforced:** `gate-supervisor-scope` (PreToolUse) BLOCKS the
+  main agent from writing `stories/tasks/validate/plan/intake/standards.md`; only a
+  dispatched sub-agent (carrying `agent_type`) may. If you get blocked, that is the
+  signal to dispatch the activity — not to reach for `SKIP_HOOKS`.
 - **Ambiguous resume words bind to the pipeline, not to shortcuts.** If the human
   says "go on", "continue", "proceed", "go", or "yes" after a dispatch or interrupt,
   it means *resume the LAST activity / continue the playbook exactly as written* —
