@@ -15,12 +15,16 @@
 #   session. So a present agent_type ⇒ a dispatched agent doing its job ⇒ allow; an
 #   absent agent_type ⇒ the supervisor ⇒ bound by the rules below.
 #
-# WHY a self-arming, session-scoped lock (not "a sprint dir exists"):
+# WHY a self-arming lock (not "a sprint dir exists"):
 #   This plugin's hooks fire for EVERY session on the machine. Gating on the mere
 #   presence of docs/agents/sprintN/ would permanently block source edits in any repo
-#   that ever ran a sprint. Instead, writing a planning artifact arms a lock stamped
-#   with THIS session's id; only that session is then bound. A stale lock from an
-#   abandoned sprint carries a different session_id and is inert.
+#   that ever ran a sprint. Instead, writing a planning artifact arms a lock stamped with
+#   the session id + a fresh mtime. The SOURCE block binds when the lock is THIS session's
+#   OR was refreshed recently (within AGENTIC_SPRINT_LOCK_TTL, default 4h) — the recency
+#   arm covers a RESUMED sprint session that acts before re-arming. A lock that is BOTH a
+#   different session AND stale (no recent activity) is inert, so an old/abandoned sprint
+#   never blocks unrelated future work. (The planner-artifact block is path-based and does
+#   not depend on the lock at all.)
 #
 # Exit: 0 allow · 2 block (stderr handed back to the model). Honors SKIP_HOOKS=1.
 set -uo pipefail
@@ -97,15 +101,25 @@ fi
 # Worktree control file the supervisor writes at dispatch: allow.
 [ "$is_ctl" = 1 ] && exit 0
 
-# Production source. Block only if THIS session armed the lock (a sprint is live now).
-if [ -f "$lock" ] && [ "$(head -1 "$lock" 2>/dev/null)" = "$session" ]; then
+# Production source. A sprint is "live" if THIS session armed the lock, OR the lock was
+# refreshed recently (within AGENTIC_SPRINT_LOCK_TTL, default 4h). The recency arm covers
+# a RESUMED sprint session that reads existing plans and acts before it re-arms (e.g.
+# hand-fixing code after a structural-review finding). A lock with no recent activity is
+# inert, so an old/abandoned sprint never blocks unrelated future work.
+lock_recent() {
+  [ -f "$lock" ] || return 1
+  local now m
+  now="$(date +%s 2>/dev/null)" || return 1
+  m="$(stat -f %m "$lock" 2>/dev/null || stat -c %Y "$lock" 2>/dev/null)" || return 1
+  [ $(( now - m )) -lt "${AGENTIC_SPRINT_LOCK_TTL:-14400}" ]
+}
+if [ -f "$lock" ] && { [ "$(head -1 "$lock" 2>/dev/null)" = "$session" ] || lock_recent; }; then
   echo "BLOCK[$GATE_NAME]: the supervisor may not write production source during a sprint:" >&2
   echo "    $file" >&2
-  echo "  You own ONLY planning artifacts (docs/agents/**). Code is written by a worker in" >&2
-  echo "  its own worktree: dispatch the matching subagent (red-worker / scaffolder /" >&2
-  echo "  green-worker) for this task — do NOT hand-build it yourself." >&2
-  echo "  Ambiguous resume ('go on', 'continue') means re-dispatch the LAST activity, never" >&2
-  echo "  'build it directly'." >&2
+  echo "  Code is written by a dispatched worker in its own worktree — you never edit source." >&2
+  echo "  On a STRUCTURAL-REVIEW finding, RE-DISPATCH the implicated GREEN task with feedback" >&2
+  echo "  (init.md); do NOT hand-fix the code yourself. For new work, dispatch red → scaffold" >&2
+  echo "  → green. Ambiguous resume ('go on','continue') = re-dispatch the LAST activity." >&2
   echo "  (Deliberate out-of-band edit outside the pipeline? Re-run with SKIP_HOOKS=1.)" >&2
   exit 2
 fi

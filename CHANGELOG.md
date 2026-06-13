@@ -20,6 +20,18 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.8.1] - 2026-06-13
+
+### Fixed
+- **Supervisor source-block gap in a resumed sprint session.** `gate-supervisor-scope`
+  only blocked the supervisor from hand-editing production source if THIS session had
+  armed the sprint lock — so a *resumed* session (reads existing plans, then e.g.
+  hand-fixes code after a structural-review finding) slipped through before it re-armed.
+  The source block now also binds when the lock was **refreshed recently**
+  (`AGENTIC_SPRINT_LOCK_TTL`, default 4h), while a lock that is both a different session
+  AND stale stays inert (no persistence trap). Tightened the block message to name the
+  right move on a structural finding: RE-DISPATCH the implicated GREEN task, don't hand-fix.
+
 ## [0.8.0] - 2026-06-13
 
 ### Added
