@@ -109,6 +109,33 @@ them the gates WARN and fall back to grep (never a false block, never a silent p
 
 Full operator playbook: [`plugin/skills/agentic-agile/SKILL.md`](plugin/skills/agentic-agile/SKILL.md).
 
+## Token efficiency (a measured run)
+
+**TheNoteBook** — a full Go backend — was built with this plugin from a `README` +
+`/agentic-agile:init` + a handful of prompts. Measured directly from the Claude Code
+transcript and the resulting repo:
+
+| Metric | Value |
+|--------|-------|
+| **Output tokens** | **~1.55M** total |
+| **Model mix** (by output) | **76% Sonnet 4.6 · 24% Opus 4.8** |
+| Agent turns | ~1,140 |
+| Input cache hits | **99.9%** — 135M cache-read vs 0.11M fresh read |
+| **Produced** | 18 internal packages · ~6.1K LOC production Go + ~11.3K LOC tests · **322 tests** · 74 commits across 6 sprints |
+
+That's a fully-tested ~17K-LOC backend for **~1.5M output tokens**. The leanness is
+structural, not luck:
+
+- **Scoped context per worker** — each sub-agent runs in its own git worktree carrying
+  only its task's contract (`init.md`) + the tests, never the whole repo, so cheaper
+  models (Sonnet did 76% of the work) handle most tasks.
+- **Gates verify deterministically** — `validate_comms`, `ctx-symbols`, `md-db`, and the
+  RED/GREEN/structural checks replace expensive model reasoning and re-reads.
+- **Caching covers ~99.9% of input**, and the hooks keep the orchestrator cheap by
+  blocking it from doing the context-heavy work itself.
+
+These mechanisms are codebase-agnostic — greenfield is simply what's measured here.
+
 ## Prerequisites
 
 | Tool | Required? | Purpose | Install |
