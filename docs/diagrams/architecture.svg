@@ -94,9 +94,9 @@
   <text x="322" y="636.2" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6a6a6a">gate-tooling</text>
   <text x="322" y="651.2" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6a6a6a">backends on PATH</text>
   <rect x="420" y="592" width="175" height="82" rx="12" fill="#f4e4c1" stroke="#4a4a4a" stroke-width="2.5" filter="url(#sh)"/>
-  <text x="508" y="622.2" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1a1a1a">WorktreeCreate</text>
-  <text x="508" y="636.2" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6a6a6a">/ Remove</text>
-  <text x="508" y="651.2" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6a6a6a">git worktree isolation</text>
+  <text x="508" y="622.1" text-anchor="middle" font-size="12" font-weight="700" fill="#1a1a1a">Worktree isolation</text>
+  <text x="508" y="636.2" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6a6a6a">isolation: "worktree"</text>
+  <text x="508" y="651.2" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6a6a6a">one git worktree / task</text>
   <rect x="605" y="592" width="175" height="82" rx="12" fill="#f4e4c1" stroke="#4a4a4a" stroke-width="2.5" filter="url(#sh)"/>
   <text x="692" y="621.9" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1a1a1a">SubagentStop gates</text>
   <text x="692" y="636.2" text-anchor="middle" font-size="9.5" font-weight="400" fill="#6a6a6a">red·scaffold·green</text>

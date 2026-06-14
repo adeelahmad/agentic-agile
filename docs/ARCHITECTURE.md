@@ -96,7 +96,6 @@ event and send stderr back to the supervisor**; other non-zero = surface as erro
 | execution | SubagentStop  | green-worker                | gate-green-verify           | a task test failed / out-of-scope diff / suppression / standards matrix red |
 | execution | SubagentStop  | structural-reviewer         | gate-structural-integrity   | a HIGH-severity (foundation-poisoning) finding |
 | execution | Stop          | final-gate                  | gate-final                  | matrix red / suppression present / unticked plan-ready box |
-| both      | WorktreeRemove| (any)                       | log-execution               | (logging only; never blocks) |
 
 `*` Planning is interactive, so the Stage-2 gate is awkward as a hard hook. Two
 viable wirings, decided by [OPEN-3]: (a) a Stop hook on the planning command that
@@ -192,8 +191,8 @@ docs/agents/
   ticks `plan-ready.md`, its worktree merges to the sprint integration branch.
 - **Abandon on HALT:** when `gate-structural-integrity` reports foundation-poisoning,
   the supervisor HALTS the dependency chain, ABANDONS the in-flight worktrees of that
-  chain (WorktreeRemove -> log-execution), and KEEPS already-merged waves. Worktree
-  isolation is what makes "revert on halt" clean — there is nothing to unwind on main.
+  chain (`git worktree remove`), and KEEPS already-merged waves. Worktree isolation is
+  what makes "revert on halt" clean — there is nothing to unwind on main.
 - **Escalation is cause-specific** (not one uniform defer):
     foundation-poisoning -> HALT chain now;
     scope / plan defect   -> human decision;

@@ -101,7 +101,7 @@ band(30,538,1140,238,"③  DETERMINISM  ·  the enforcement layer (Claude Code h
 defs3=[
  (50,BEIGE,[("PreToolUse",12.5,"700"),("gate-supervisor-scope",9.5,"400"),("no supervisor code",9.5,"400")]),
  (235,BEIGE,[("SubagentStart",12.5,"700"),("gate-tooling",9.5,"400"),("backends on PATH",9.5,"400")]),
- (420,BEIGE,[("WorktreeCreate",12.5,"700"),("/ Remove",9.5,"400"),("git worktree isolation",9.5,"400")]),
+ (420,BEIGE,[("Worktree isolation",12,"700"),("isolation: \"worktree\"",9.5,"400"),("one git worktree / task",9.5,"400")]),
  (605,BEIGE,[("SubagentStop gates",11.5,"700"),("red·scaffold·green",9.5,"400"),("structural·final",9.5,"400")]),
  (790,GRAY,[("Comms (story-bound)",10.5,"700"),("init.md ⇄ output.md",9.5,"400"),("append-only",9.5,"400")]),
  (975,GRAY,[("md-db · ctx-symbols",10.5,"700"),("+ transcripts",9.5,"400"),("full capture",9.5,"400")]),

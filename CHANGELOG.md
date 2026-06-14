@@ -20,6 +20,24 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.8.3] - 2026-06-13
+
+### Fixed
+- **Invalid plugin manifest: removed the `WorktreeCreate`/`WorktreeRemove` hooks.** They
+  were added in v0.6.0 based on bad research — newer Claude Code rejects them with
+  *"Unknown hook event(s)"* (they are not valid plugin-manifest events; they only ever
+  belonged in user `settings.json`). The plugin now relies on the harness's **built-in
+  `isolation: "worktree"`** for git repos (the nesting symptom was in the custom hook, so
+  this also removes that failure mode). `bin/worktree-create`/`worktree-remove` are kept
+  as an **optional user-`settings.json`** mechanism for a non-git VCS, documented as such.
+  `assert_worktree_isolation` still enforces a real linked worktree regardless of source.
+
+### Added
+- **`make package`** — bundles the release (`.claude-plugin` + `plugin` + README +
+  CHANGELOG + LICENSE) into `package/agentic-agile-vX.Y.Z.tar.gz` (+ SHA-256) and
+  publishes it as the **GitHub release** for the current tag (via `gh`, `--latest`, notes
+  from the matching CHANGELOG section). `package/` is git-ignored.
+
 ## [0.8.2] - 2026-06-13
 
 ### Fixed

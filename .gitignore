@@ -5,3 +5,5 @@
 target/
 # generated eval runs (only the evals.json suites are tracked)
 eval-workspace/
+# release bundles built by `make package`
+package/

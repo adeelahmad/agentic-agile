@@ -1,13 +1,5 @@
 {
   "hooks": {
-    "WorktreeCreate": [
-      { "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/worktree-create", "timeout": 60 } ] }
-    ],
-    "WorktreeRemove": [
-      { "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/worktree-remove", "timeout": 30 } ] }
-    ],
     "PreToolUse": [
       { "matcher": "Write|Edit|MultiEdit|NotebookEdit", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-supervisor-scope" } ] }

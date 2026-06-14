@@ -46,7 +46,8 @@ Scheduled tasks.
                        until verified" hook point (used for final-gate).
     PreToolUse         before a tool runs — can block/allow/ask (used for
                        bounded-cost-style guards if added).
-    WorktreeCreate / WorktreeRemove   worktree lifecycle (used for ledger logging).
+    (worktree lifecycle is handled by the harness's built-in `isolation: "worktree"`;
+     `WorktreeCreate`/`WorktreeRemove` are user-settings.json-only hooks, not plugin events.)
 - A hook returning exit 2 on SubagentStop blocks the stop and hands stderr to the
   supervisor; the supervisor (not the hook) owns the retry-or-escalate decision.
 

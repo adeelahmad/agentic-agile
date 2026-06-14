@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# worktree-create — WorktreeCreate hook. Makes the harness's `isolation: "worktree"`
-# dispatch work via plain `git worktree`, so every agentic-agile worker is isolated
-# without the user wiring anything. Without this hook the harness errors with
-# "Cannot create agent worktree: not in a git repository and no WorktreeCreate hooks".
+# worktree-create — OPTIONAL git-worktree helper for `isolation: "worktree"`.
+# Plain git repos are handled by the harness's BUILT-IN worktree isolation; you do NOT
+# need this. It exists for a non-git VCS (or an env where the built-in can't create a
+# worktree): wire it into your USER settings.json as a `WorktreeCreate` hook
+# (WorktreeCreate/WorktreeRemove are settings.json-only — NOT valid in a plugin manifest).
 #
 # Contract (official): stdin = JSON { cwd, base_path, isolation_name, ... }. The hook
 # MUST create the worktree and print its absolute path on STDOUT (nothing else), exit 0.

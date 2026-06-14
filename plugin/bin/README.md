@@ -35,8 +35,8 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 | script | purpose |
 |--------|---------|
 | `transcripts`       | full capture: stage-in / record / prompt / snapshot / stop / view / prune (`transcripts --help`) |
-| `worktree-create` | `WorktreeCreate` hook — `git worktree add` for `isolation: "worktree"`; prints the path, exit 2 blocks |
-| `worktree-remove` | `WorktreeRemove` hook — `git worktree remove` cleanup; always exit 0 (cannot block) |
+| `worktree-create` | OPTIONAL `git worktree add` helper — wire into **user `settings.json`** as a `WorktreeCreate` hook for a non-git VCS (NOT a valid plugin-manifest event). Built-in `isolation: "worktree"` covers plain git. |
+| `worktree-remove` | OPTIONAL `git worktree remove` cleanup companion for the above (user `settings.json` `WorktreeRemove`) |
 | `log-execution` | append a transition line to `execution.log` |
 
 ## v0.2 — self-check at every step

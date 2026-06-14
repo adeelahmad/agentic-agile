@@ -90,8 +90,8 @@ them the gates WARN and fall back to grep (never a false block, never a silent p
   `tasks.md` / `validate.md` / `plan.md` — then stops for your approval.
 - **Execution** (human absent): per wave, RED → SCAFFOLD → GREEN → STRUCTURAL-REVIEW,
   then once per sprint a FINAL-GATE. One **git-worktree-isolated** sub-agent per task
-  (isolation works out of the box via the plugin's `WorktreeCreate`/`WorktreeRemove`
-  hooks); merge on pass, abandon the chain on a foundation-poisoning halt.
+  (the harness's built-in `isolation: "worktree"`, on any committed git repo); merge on
+  pass, abandon the chain on a foundation-poisoning halt.
 - **Determinism is structural, not vibes.** Hooks enforce the invariants the model
   can't talk its way past: the supervisor can't write production source
   (`gate-supervisor-scope`), can't start execution with its backends missing
@@ -176,6 +176,7 @@ make hooks          # install the tracked git hooks (.githooks → core.hooksPat
 make smoke          # offline gate smoke test
 make release        # verify (ci+validate+version-check) then tag vX.Y.Z
 make publish        # push branch + tags to origin
+make package        # bundle the release into package/ + publish the GitHub release (gh)
 ```
 
 Git hooks (opt in with `make hooks`): **pre-commit** runs `fmt-check · json ·

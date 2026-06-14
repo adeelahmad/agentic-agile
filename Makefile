@@ -13,6 +13,8 @@ BIN_DIR      ?= $(HOME)/.local/bin
 REPO         := $(CURDIR)
 VERSION      := $(shell python3 -c "import json;print(json.load(open('plugin/.claude-plugin/plugin.json'))['version'])")
 TAG          := v$(VERSION)
+PKG_DIR      := package
+PKG          := $(PKG_DIR)/agentic-agile-$(TAG).tar.gz
 
 # Colors
 C := \033[36m
@@ -121,6 +123,29 @@ publish: ## Push the current branch + tags to origin (run after `make release`)
 	git push origin HEAD
 	git push origin --tags
 	@echo "Published. Users: /plugin marketplace add <repo-url> && /plugin install $(PLUGIN)@$(MARKET)"
+
+.PHONY: package
+package: ## Bundle the release into package/ and publish it as the GitHub release for $(TAG)
+	@command -v gh >/dev/null || { echo "gh CLI not found — https://cli.github.com"; exit 1; }
+	@git rev-parse "$(TAG)" >/dev/null 2>&1 || { echo "tag $(TAG) missing — run 'make release && make publish' first"; exit 1; }
+	@mkdir -p $(PKG_DIR)
+	@rm -f "$(PKG)" "$(PKG).sha256" "$(PKG_DIR)/notes-$(TAG).md"
+	tar --no-xattrs \
+	  --exclude='.git' --exclude='target' --exclude='.agentic' --exclude='.transcripts' \
+	  --exclude='.DS_Store' --exclude='node_modules' --exclude='$(PKG_DIR)' \
+	  -czf "$(PKG)" .claude-plugin plugin README.md CHANGELOG.md LICENSE
+	@cd $(PKG_DIR) && shasum -a 256 "$(notdir $(PKG))" > "$(notdir $(PKG)).sha256"
+	@awk -v v='$(VERSION)' 'BEGIN{p=0} $$0 ~ "^## \\["v"\\]"{p=1;next} /^## \[/{if(p)exit} p' CHANGELOG.md > "$(PKG_DIR)/notes-$(TAG).md"
+	@test -s "$(PKG_DIR)/notes-$(TAG).md" || echo "agentic-agile $(TAG)" > "$(PKG_DIR)/notes-$(TAG).md"
+	@echo "Built $(PKG)"
+	@if gh release view "$(TAG)" >/dev/null 2>&1; then \
+	  gh release upload "$(TAG)" "$(PKG)" "$(PKG).sha256" --clobber; \
+	  gh release edit "$(TAG)" --latest --notes-file "$(PKG_DIR)/notes-$(TAG).md"; \
+	else \
+	  gh release create "$(TAG)" "$(PKG)" "$(PKG).sha256" --title "agentic-agile $(TAG)" \
+	    --notes-file "$(PKG_DIR)/notes-$(TAG).md" --latest; \
+	fi
+	@echo "Published GitHub release $(TAG) with $(notdir $(PKG))."
 
 # ── Hooks / housekeeping ───────────────────────────────────────────
 .PHONY: hooks
