@@ -45,8 +45,14 @@ block the stop and feed the failure reason back to the supervisor.
 # 2) Add the marketplace and install the plugin (inside Claude Code)
 /plugin marketplace add adeelahmad/agentic-agile
 /plugin install agentic-agile@agentic-agile-marketplace
+/reload-plugins   # apply hooks without a full restart
 #    (for local dev, point marketplace add at your checkout instead: ./path/to/repo)
 ```
+
+> **Staying current:** third-party marketplaces don't auto-update by default — run
+> `/plugin marketplace update agentic-agile-marketplace` (or enable auto-update in
+> `/plugin` → Marketplaces), then `/reload-plugins`. Step 1 (the Rust-built `ctx-symbols`
+> + `md-db`) is what makes the gates run at full strength; without it they degrade to grep.
 
 ## Using it
 
