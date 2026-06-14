@@ -6,7 +6,15 @@
     {
       "name": "agentic-agile",
       "source": "./plugin",
-      "description": "Two-stage planning + two-phase TDD execution with deterministic hook gates, per-task transcripts, and a memory-producing retrospective."
+      "displayName": "Agentic Agile",
+      "description": "Two-stage planning + two-phase TDD execution with deterministic hook gates, per-task transcripts, and a memory-producing retrospective.",
+      "author": { "name": "Adeel Ahmad" },
+      "homepage": "https://github.com/adeelahmad/agentic-agile",
+      "repository": "https://github.com/adeelahmad/agentic-agile",
+      "license": "MIT",
+      "category": "development",
+      "keywords": ["agile","tdd","orchestration","hooks","sub-agents","worktrees","determinism","gates","retrospective","memory"],
+      "tags": ["tdd","agentic","hooks","worktrees","gates","sprint","autonomous"]
     }
   ]
 }
