@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# worktree-hygiene — SubagentStart(red-worker|scaffolder|green-worker|structural-reviewer|final-gate).
+#
+# A worker reaches its story's docs at STORY_DIR — an ABSOLUTE path back into the MAIN
+# tree (see bin/_gatelib.sh) — never a copy inside its own worktree. But whichever
+# mechanism created the worktree (the harness's BUILT-IN `isolation: "worktree"`, which
+# most plain-git setups use, or the OPTIONAL bin/worktree-create), `git worktree add`
+# checks out docs/agents/** from HEAD like any other tracked path, so every worker
+# worktree ends up carrying a redundant, increasingly stale copy of the whole planning
+# tree. This trims that after the fact: sparse-checkout removes docs/agents/ from THIS
+# worktree only (per-worktree config; the main tree and sibling worktrees are untouched).
+#
+# It also bootstraps the MAIN tree's .gitignore with the control/transcript dirs
+# (.agentic/, .transcripts/) the first time a worker runs against it — idempotent, so
+# after the first successful append this is a no-op check on every later dispatch. This
+# runs here (not only in the optional worktree-create) because worktree-create is NOT
+# invoked for plain git repos using the built-in isolation — this hook is what actually
+# fires regardless of which path created the worktree.
+#
+# Best-effort + NEVER blocks (always exit 0, transcripts-hook convention) — an older git
+# without `sparse-checkout`, or a repo with no docs/agents/, just leaves things as-is.
+set -uo pipefail
+
+payload="$(cat 2>/dev/null || true)"
+jstr() { printf '%s' "$payload" | sed -nE "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/p" | head -1; }
+WT="$(jstr cwd)"; [ -n "$WT" ] || WT="${AGENTIC_WORKTREE:-$PWD}"
+
+git -C "$WT" rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+
+# Only touch a LINKED worktree, never the main/shared tree. Same idiom as
+# _gatelib.sh's assert_worktree_isolation: the main tree's `.git` is a DIRECTORY; a
+# linked worktree's `.git` is a FILE ("gitdir: ..."). This is invariant to how deep
+# under the tree $WT points (unlike comparing --git-dir/--git-common-dir strings,
+# which can both come back relative and equal-looking from a subdirectory of the
+# main tree, wrongly treating it as a linked worktree).
+root="$(git -C "$WT" rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$root" ] && [ -f "$root/.git" ]; then
+  sc_file="$(git -C "$root" rev-parse --git-path info/sparse-checkout 2>/dev/null)"
+  if [ -n "$sc_file" ] && [ -s "$sc_file" ]; then
+    # Sparse-checkout already configured (third-party repo?) — merge our exclusion
+    # in rather than clobber whatever patterns are already there.
+    if ! grep -qxF '!/docs/agents/' "$sc_file" 2>/dev/null; then
+      { cat "$sc_file" 2>/dev/null; printf '%s\n' '!/docs/agents/'; } > "$sc_file.new" 2>/dev/null \
+        && mv "$sc_file.new" "$sc_file" 2>/dev/null || true
+      git -C "$root" sparse-checkout reapply >/dev/null 2>&1 || true
+    fi
+  else
+    git -C "$root" sparse-checkout init --no-cone >/dev/null 2>&1 \
+      && git -C "$root" sparse-checkout set '/*' '!/docs/agents/' >/dev/null 2>&1 || true
+  fi
+fi
+
+# .gitignore bootstrap on the MAIN tree (first entry of `git worktree list` is always
+# the main tree, regardless of which worktree $WT points at). Full rest-of-line, not
+# awk field-splitting — a $2-only split truncates at the first space in the path.
+main="$(git -C "$WT" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p' | head -1)"
+[ -n "$main" ] || main="$(git -C "$WT" rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$main" ]; then
+  gi="$main/.gitignore"
+  touch "$gi" 2>/dev/null || true
+  need=0
+  for pattern in '.agentic/' '.transcripts/'; do
+    grep -qxF "$pattern" "$gi" 2>/dev/null || need=1
+  done
+  if [ "$need" = 1 ]; then
+    # Bounded mkdir-lock: multiple workers can hit this on the SAME first dispatch
+    # (mkdir is atomic; a plain grep-then-append check-then-act is not). Only taken
+    # when something's actually missing, so steady-state dispatches never pay for it.
+    lockdir="$main/.agentic/.gitignore.lock"
+    mkdir -p "$(dirname "$lockdir")" 2>/dev/null || true
+    tries=0
+    while ! mkdir "$lockdir" 2>/dev/null; do
+      tries=$((tries + 1)); [ "$tries" -ge 20 ] && break
+      sleep 0.1 2>/dev/null || sleep 1
+    done
+    for pattern in '.agentic/' '.transcripts/'; do
+      grep -qxF "$pattern" "$gi" 2>/dev/null || printf '%s\n' "$pattern" >> "$gi" 2>/dev/null || true
+    done
+    rmdir "$lockdir" 2>/dev/null || true
+  fi
+fi
+
+exit 0

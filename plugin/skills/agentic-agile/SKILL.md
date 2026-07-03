@@ -528,6 +528,18 @@ source of truth the gate uses, so first-pass blocks become rare.
   chmod is the softer "not yours to write" signal (defeatable, but it errors loudly).
 - Retention: everything is kept (no auto-compaction). `transcripts prune` is a manual,
   opt-in cap (`AGENTIC_TRANSCRIPTS_KEEP=<n>`) if disk gets tight.
+
+## Worktree hygiene (bin/worktree-hygiene)
+- SubagentStart (exec roles) sparse-checkout-excludes `docs/agents/` from the new
+  worktree — a worker reaches its story's docs at the absolute `STORY_DIR` path back
+  into the main tree, never a copy inside its own worktree, so the checked-out copy is
+  pure redundant, would-go-stale weight. Per-worktree config; the main tree and
+  sibling worktrees are untouched.
+- Same hook bootstraps the main tree's `.gitignore` with `.agentic/`/`.transcripts/`
+  the first time a worker runs against it (idempotent — a no-op check after that).
+  Fires regardless of whether the harness's built-in `isolation: "worktree"` or the
+  optional `bin/worktree-create` made the worktree, since the built-in path never
+  calls `worktree-create` at all.
 - The retrospective reads this to distill memory. Gate verdicts, supervisor decisions,
   and worktree create/merge/abandon are all captured here.
 

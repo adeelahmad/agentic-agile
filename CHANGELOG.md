@@ -20,6 +20,26 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.9.0] - 2026-07-03
+
+### Added
+- **`bin/worktree-hygiene`** — new `SubagentStart` hook (exec roles) that sparse-checks
+  `docs/agents/` out of a worker's worktree. Workers already reach their story's docs via
+  the absolute `STORY_DIR` path back into the main tree, so the tracked `docs/agents/**`
+  checkout `git worktree add` puts in every worker worktree was pure, increasingly-stale
+  redundancy. Runs regardless of whether the harness's built-in `isolation: "worktree"` or
+  the optional `bin/worktree-create` made the worktree (the built-in path never calls
+  `worktree-create`, so a fix scoped to that script alone wouldn't have fired for it).
+- Same hook (and `bin/worktree-create`, for parity) bootstraps the **main tree's
+  `.gitignore`** with `.agentic/`/`.transcripts/` the first time a worker runs against it
+  — idempotent, mkdir-lock-guarded against concurrent first dispatches, and skipped
+  entirely once the entries already exist.
+
+### Fixed
+- Sparse-checkout now **merges** its `!/docs/agents/` exclusion into any pre-existing
+  sparse-checkout pattern file instead of overwriting it, in case a target repo already
+  used sparse-checkout for its own reasons.
+
 ## [0.8.3] - 2026-06-13
 
 ### Fixed

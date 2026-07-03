@@ -10,7 +10,8 @@
     ],
     "SubagentStart": [
       { "matcher": "red-worker|scaffolder|green-worker|structural-reviewer|final-gate", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-tooling" } ] },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-tooling" },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/worktree-hygiene" } ] },
       { "matcher": "*", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts stage-in" } ] }
     ],

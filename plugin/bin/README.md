@@ -35,7 +35,8 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 | script | purpose |
 |--------|---------|
 | `transcripts`       | full capture: stage-in / record / prompt / snapshot / stop / view / prune (`transcripts --help`) |
-| `worktree-create` | OPTIONAL `git worktree add` helper — wire into **user `settings.json`** as a `WorktreeCreate` hook for a non-git VCS (NOT a valid plugin-manifest event). Built-in `isolation: "worktree"` covers plain git. |
+| `worktree-hygiene` | SubagentStart · exec roles — sparse-checks `docs/agents/` out of the new worktree (workers reach it via the absolute `STORY_DIR` back into the main tree, never their own copy) + bootstraps the main tree's `.gitignore` with `.agentic/`/`.transcripts/` if missing. Runs regardless of whether the harness's built-in isolation or `worktree-create` made the worktree. |
+| `worktree-create` | OPTIONAL `git worktree add` helper — wire into **user `settings.json`** as a `WorktreeCreate` hook for a non-git VCS (NOT a valid plugin-manifest event). Built-in `isolation: "worktree"` covers plain git. Also applies the same sparse-checkout + `.gitignore` bootstrap as `worktree-hygiene`. |
 | `worktree-remove` | OPTIONAL `git worktree remove` cleanup companion for the above (user `settings.json` `WorktreeRemove`) |
 | `log-execution` | append a transition line to `execution.log` |
 
