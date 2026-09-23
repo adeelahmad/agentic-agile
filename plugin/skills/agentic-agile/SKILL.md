@@ -278,7 +278,7 @@ future sprint's Stage-2 and chain straight into execution.
    Connections). A story missing failure-scenarios or connections is rejected.
 2. **tasks.md** per story — decompose into right-sized tasks (reviewable in one
    sitting, revertable as one change, demo describable in one sentence) that ONE worker
-   attempt can finish inside the time box (default hard 60k tokens / 15 min).
+   attempt can finish inside the time box (default hard 250k tokens / 30 min).
 3. **validate.md** per story — the rubric, no judgement calls.
 4. **plan.md** per story — tests-only; both acceptance criteria and edge/failure
    cases; static-invariant tests where relevant; each bullet has a real
@@ -407,10 +407,15 @@ retried — see "Budget overrun" below.)
 ### Per-attempt time box (tokens + wall clock)
 
 Every `red-worker` / `scaffolder` / `green-worker` attempt runs under two budgets, each
-with a soft and a hard limit. Defaults are deliberately tight — **40k / 60k tokens,
-10 / 15 min** — and the project's confirmed values live in `docs/agents/defaults.md`; a single task
-may carry a planner-authored `budget:` override line in tasks.md. Tokens = the worker's
-current context + all its output tokens; time = wall clock since its first tool call.
+with a soft and a hard limit. Defaults — **150k / 250k tokens,
+20 / 30 min** (a real RED/GREEN attempt that reads the style guide and runs the
+fmt/vet/lint/build/test matrix uses 60–190k) — and the project's confirmed values live in `docs/agents/defaults.md`; a single task
+may carry a planner-authored `budget:` override line in tasks.md (or `BUDGET_*` lines in
+its worktree's `task.env`). Tokens = the worker's current context + all its output
+tokens; time = wall clock since its first tool call. The hook finds the worker's
+worktree from the paths its tool calls name (`git -C <wt>`, `cd <wt>`, absolute paths),
+not only from the call's cwd; `agentic budget status` shows, per attempt, where its
+budget came from and how its worktree was found.
 
 The hooks enforce it — you don't: `budget hook` (PreToolUse/PostToolUse on every tool
 call, SubagentStop) measures the worker from its own transcript and

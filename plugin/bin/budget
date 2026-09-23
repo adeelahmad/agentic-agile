@@ -4,8 +4,8 @@
 Every worker attempt (red-worker / scaffolder / green-worker) runs under two budgets,
 each with a SOFT and a HARD limit:
 
-    tokens   soft 40k   hard 60k     (context in use + all output tokens, see below)
-    time     soft 10m   hard 15m     (wall clock since the attempt's first tool call)
+    tokens   soft 150k  hard 250k    (context in use + all output tokens, see below)
+    time     soft 20m   hard 30m     (wall clock since the attempt's first tool call)
 
   SOFT crossed  -> the worker is told, inside its own tool results (PostToolUse
                    additionalContext): how much is left, finish or wrap up gracefully.
@@ -19,7 +19,7 @@ Resolution order (first set wins):  per-task `budget:` line in tasks.md  >
     BUDGET_* in the worktree's .agentic/task.env  >  docs/agents/defaults.md  >  built-ins.
 
 Usage:
-  budget resolve [--tasks FILE --task Tn]   print the resolved BUDGET_* lines (for task.env)
+  budget resolve [--tasks FILE --task Tn] [--worktree WT]   the resolved BUDGET_* lines + their source
   budget hook pre|post|stop                 hook mode (reads the hook JSON on stdin)
   budget watch [--interval S] [--grace S]   supervisor: block until a worker must be
                                             killed or none is running; prints KILL lines
@@ -104,17 +104,22 @@ def task_override(tasks_file, task):
     return vals
 
 
-def resolve(cwd, tasks_file=None, task=None, task_env=None):
+def resolve(cwd, tasks_file=None, task=None, task_env=None, with_source=False):
     b = conf_values(cwd)
+    src = "docs/agents/defaults.md" if os.path.isfile(_paths.defaults_file(cwd)) else "built-in defaults"
     for k in BUDGET_KEYS:
         v = (task_env or {}).get("BUDGET_" + k)
         if v and v.isdigit():
             b[k] = int(v)
-    b.update(task_override(tasks_file, task))
+            src = "task.env BUDGET_*"
+    over = task_override(tasks_file, task)
+    if over:
+        b.update(over)
+        src = "tasks.md `budget:` line (%s)" % task
     # a soft limit above its hard limit is a config slip: clamp, never widen
     b["TOKENS_SOFT"] = min(b["TOKENS_SOFT"], b["TOKENS_HARD"])
     b["TIME_SOFT_MIN"] = min(b["TIME_SOFT_MIN"], b["TIME_HARD_MIN"])
-    return b
+    return (b, src) if with_source else b
 
 
 def transcript_for(payload, agent_id):
@@ -132,6 +137,95 @@ def bound_worktree(cwd, agent_id):
     st = load_state(os.path.join(_paths.home(cwd, "state/agents"), "%s.json" % safe(agent_id)))
     wt = (st or {}).get("worktree") or ""
     return wt if wt and os.path.isdir(wt) else ""
+
+
+PATH_ARG = re.compile(r"(?:(?<=\s)-C|(?:^|[;&|(]\s*)cd|--work-tree=?|--git-dir=?)\s*['\"]?([^\s'\";&|)]+)")
+ABS_PATH = re.compile(r"(?:^|[\s'\"=:(])(/[^\s'\";&|)]+)")
+
+
+def _task_worktree_of(path, project):
+    """The linked worktree (of THIS repo) that contains `path` and carries .agentic/task.env."""
+    d = path if os.path.isdir(path) else os.path.dirname(path)
+    for _ in range(40):
+        if not d or d == os.path.dirname(d):
+            return ""
+        if os.path.isfile(os.path.join(d, ".git")) and os.path.isfile(os.path.join(d, ".agentic", "task.env")):
+            return d if os.path.realpath(_paths.project(d)) == os.path.realpath(project) else ""
+        if os.path.isdir(os.path.join(d, ".git")):
+            return ""                                   # reached the main tree
+        d = os.path.dirname(d)
+    return ""
+
+
+def path_candidates(payload):
+    """Paths a tool call names: `git -C p`, `cd p`, --work-tree, absolute paths, file paths, patch headers."""
+    ti = payload.get("tool_input") or {}
+    out = []
+    for k in ("file_path", "filePath", "path", "notebook_path", "workdir", "cwd"):
+        v = ti.get(k)
+        if isinstance(v, str) and v:
+            out.append(v)
+    cmd = ti.get("command") if isinstance(ti.get("command"), str) else ""
+    if cmd:
+        out += PATH_ARG.findall(cmd)
+        out += re.findall(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$", cmd, re.M)
+        out += ABS_PATH.findall(cmd)
+    cwd = payload.get("cwd") or ""
+    return [p if os.path.isabs(p) else os.path.join(cwd, p) for p in out if p]
+
+
+def claimed_worktrees(cwd, agent_id):
+    got = set()
+    for p in glob.glob(os.path.join(state_dir(cwd), "*.json")):
+        st = load_state(p)
+        if st and st.get("agent_id") != agent_id and not st.get("done") and st.get("task_env_found"):
+            got.add(st.get("worktree"))
+    return got
+
+
+def find_worktree(payload, cwd, agent_id, role):
+    """Which worktree is this worker in? Independent of the tool call's cwd, because workers
+    often address their worktree with `git -C <wt>` / absolute paths from the main tree.
+      1. a recorded binding (`agentic bind`, or an earlier call of this attempt)
+      2. a path the tool call names that lies inside a task worktree
+      3. the tool call's cwd
+      4. the ONE unclaimed task worktree whose task.env names this role (first calls that
+         only read main-tree files, e.g. the style guide)"""
+    project = _paths.project(cwd)
+    wt = bound_worktree(cwd, agent_id)
+    if wt:
+        return wt, "bound"
+    for cand in path_candidates(payload):
+        wt = _task_worktree_of(cand, project)
+        if wt:
+            return wt, "path in tool call"
+    wt = _task_worktree_of(cwd, project)
+    if wt:
+        return wt, "cwd"
+    claimed = claimed_worktrees(cwd, agent_id)
+    mine = []
+    for te in glob.glob(os.path.join(project, ".agentic", "worktrees", "*", ".agentic", "task.env")) + \
+            [os.path.join(w, ".agentic", "task.env") for w in _worktree_list(project)]:
+        w = os.path.dirname(os.path.dirname(te))
+        if w in claimed or w in [m for m in mine] or not os.path.isfile(te):
+            continue
+        env = read_kv(te)
+        if env.get("AGENT_ROLE") == role:
+            mine.append(w)
+    return (mine[0], "only %s worktree" % role) if len(mine) == 1 else ("", "")
+
+
+def _worktree_list(project):
+    return [l[len("worktree "):] for l in sh("git", "-C", project, "worktree", "list", "--porcelain").splitlines()
+            if l.startswith("worktree ")][1:]
+
+
+def remember_worktree(cwd, agent_id, wt):
+    p = os.path.join(_paths.home(cwd, "state/agents"), "%s.json" % safe(agent_id))
+    reg = load_state(p) or {"agent_id": agent_id}
+    if reg.get("worktree") != wt:
+        reg["worktree"] = wt
+        save_state(p, reg)
 
 
 def safe(s):
@@ -199,12 +293,11 @@ def hook(mode):
     if not agent_id or not role:
         return
     cwd = payload.get("cwd") or os.getcwd()
-    top = bound_worktree(cwd, agent_id) or sh("git", "-C", cwd, "rev-parse", "--show-toplevel") or cwd
+    wt, how = find_worktree(payload, cwd, agent_id, role)
+    top = wt or sh("git", "-C", cwd, "rev-parse", "--show-toplevel") or cwd
     spath = os.path.join(state_dir(cwd), "%s.json" % safe(agent_id))
     st = load_state(spath)
     now = time.time()
-    if st is not None and not st.get("task") and top != st.get("worktree"):
-        st = None                  # bound to its worktree after the first call: re-read task.env
 
     if mode == "stop":
         if st:
@@ -212,15 +305,34 @@ def hook(mode):
             save_state(spath, st)
         return
 
-    if st is None:
+    def resolve_for(top):
         env = read_kv(os.path.join(top, ".agentic", "task.env"))
         task = env.get("TASK_ID", "")
         tasks_file = os.path.join(env["STORY_DIR"], "tasks.md") if env.get("STORY_DIR") else None
-        short_task = task.split()[-1] if task else ""
-        b = resolve(cwd, tasks_file, re.sub(r"^.*[-_ ](T\d+)$", r"\1", short_task) or None, env)
+        tn = re.sub(r"^.*[-_ ](T\d+)$", r"\1", task.split()[-1]) if task else None
+        b, src = resolve(cwd, tasks_file, tn, env, with_source=True)
+        return env, task, b, src
+
+    if st is None:
+        env, task, b, src = resolve_for(top)
         st = {"agent_id": agent_id, "role": role, "task": task, "attempt": env.get("ATTEMPT", ""),
               "worktree": top, "story_dir": env.get("STORY_DIR", ""), "start": now, "budget": b,
+              "budget_source": src, "task_env_found": bool(env), "found_by": how,
               "soft_warned": False, "final_warned": False, "hard": False, "done": None}
+    elif wt and not st.get("task_env_found"):
+        # the worktree became known after the first call: take ITS task.env/budget, keep the clock
+        env, task, b, src = resolve_for(wt)
+        old_top = st.get("worktree")
+        st.update({"task": task, "attempt": env.get("ATTEMPT", ""), "worktree": wt, "story_dir": env.get("STORY_DIR", ""),
+                   "budget": b, "budget_source": src, "task_env_found": bool(env), "found_by": how})
+        if st.get("hard") and not st.get("hook_killed"):
+            st.update({"hard": False, "denials": 0})       # it was judged against the wrong budget
+            try:
+                os.remove(os.path.join(old_top, ".agentic", "budget-exceeded"))
+            except OSError:
+                pass
+    if wt:
+        remember_worktree(cwd, agent_id, wt)
     if st.get("done") and not st.get("killed") and not st.get("hook_killed"):
         st["done"] = None          # a SubagentStop gate blocked the stop: still working
     b = st["budget"]
@@ -239,9 +351,9 @@ def hook(mode):
     over_hard = (toks is not None and toks >= t_hard) or mins >= m_hard
     over_soft = (toks is not None and toks >= b["TOKENS_SOFT"]) or mins >= b["TIME_SOFT_MIN"]
     near_hard = (toks is not None and toks >= 0.9 * t_hard) or mins >= 0.9 * m_hard
-    left = "%s of %s tokens used (%s left), %.1f of %d min used (%.1f min left)" % (
+    left = "%s of %s tokens used (%s left), %.1f of %d min used (%.1f min left); budget from %s" % (
         fmt_k(toks), fmt_k(t_hard), fmt_k(max(t_hard - toks, 0)) if toks is not None else "?",
-        mins, m_hard, max(m_hard - mins, 0))
+        mins, m_hard, max(m_hard - mins, 0), st.get("budget_source") or "?")
     report = os.path.join(st["story_dir"], "output.md") if st.get("story_dir") else "the story's output.md"
 
     if over_hard and not st["hard"]:
@@ -380,15 +492,16 @@ def status(cwd):
     if not rows:
         print("no tracked worker attempts")
         return 0
-    print("%-22s %-13s %-14s %-4s %-16s %-14s %s" % ("agent_id", "role", "task", "att", "tokens", "minutes", "state"))
+    print("%-22s %-13s %-14s %-4s %-16s %-14s %-7s %s" % ("agent_id", "role", "task", "att", "tokens", "minutes", "state", "budget from (worktree found by)"))
     for _, s in rows:
         refresh(s)
         b = s["budget"]
         state = "killed" if s.get("killed") else "done" if s.get("done") else ("HARD" if s.get("hard") else ("soft" if s.get("soft_warned") else "ok"))
-        print("%-22s %-13s %-14s %-4s %-16s %-14s %s" % (
+        print("%-22s %-13s %-14s %-4s %-16s %-14s %-7s %s" % (
             s["agent_id"][:22], s["role"], (s.get("task") or "?")[:14], s.get("attempt") or "?",
             "%s/%s" % (fmt_k(s.get("tokens")), fmt_k(b["TOKENS_HARD"])),
-            "%.1f/%d" % (s["elapsed_min"], b["TIME_HARD_MIN"]), state))
+            "%.1f/%d" % (s["elapsed_min"], b["TIME_HARD_MIN"]), state,
+            "%s (%s)" % (s.get("budget_source") or "?", s.get("found_by") or "not found")))
     return 0
 
 
@@ -453,10 +566,12 @@ def main(argv):
             pass                                   # never break a tool call
         return 0
     if cmd == "resolve":
-        env = read_kv(os.path.join(sh("git", "rev-parse", "--show-toplevel") or cwd, ".agentic", "task.env"))
-        b = resolve(cwd, opts.get("tasks"), opts.get("task"), env)
+        wt = opts.get("worktree") or sh("git", "rev-parse", "--show-toplevel") or cwd
+        env = read_kv(os.path.join(wt, ".agentic", "task.env"))
+        b, src = resolve(cwd, opts.get("tasks"), opts.get("task"), env, with_source=True)
         for k in ("TOKENS_SOFT", "TOKENS_HARD", "TIME_SOFT_MIN", "TIME_HARD_MIN"):
             print("BUDGET_%s=%d" % (k, b[k]))
+        print("# from: %s" % src)
         return 0
     if cmd == "watch":
         return watch(cwd, int(opts.get("interval") or 20), int(opts.get("grace") or 60))

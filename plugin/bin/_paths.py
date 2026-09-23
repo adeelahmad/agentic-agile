@@ -8,10 +8,10 @@ import re
 import subprocess
 
 DEFAULTS = {
-    "TOKENS_SOFT": 40000,
-    "TOKENS_HARD": 60000,
-    "TIME_SOFT_MIN": 10,
-    "TIME_HARD_MIN": 15,
+    "TOKENS_SOFT": 150000,
+    "TOKENS_HARD": 250000,
+    "TIME_SOFT_MIN": 20,
+    "TIME_HARD_MIN": 30,
     "MAX_REPLANS": 2,
     "MODEL_PLANNING": "claude-opus-5-5",
     "MODEL_WORKER": "sonnet",
