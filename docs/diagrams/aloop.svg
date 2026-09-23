@@ -1,0 +1,327 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" role="img" aria-labelledby="t d">
+<title id="t">Aladin's Loop (aloop) — Deterministic Autonomous Sprint Lifecycle</title>
+<desc id="d">Intent in; Opus planner writes a deterministic, self-contained sprint plan; the Sonnet orchestrator (Aladin) dispatches worker genies that build, test, review and verify in parallel, time-boxed by hooks; tools run outside model control; everything is recorded (stats.md, NEXT.md, execution.log); the runtime clears context and the fresh session resumes from NEXT.md; budget overruns loop back to the planner; repeat until the project is complete. Runs on Claude Code, Codex and OpenCode.</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf3df"/><stop offset=".4" stop-color="#f8f7f2"/><stop offset="1" stop-color="#eef1f7"/></linearGradient>
+<pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0 H0 V32" fill="none" stroke="#2f64d6" stroke-opacity=".06" stroke-width="1"/></pattern>
+<linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".97"/><stop offset="1" stop-color="#f6f9ff" stop-opacity=".94"/></linearGradient>
+<linearGradient id="head" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#13235a"/><stop offset="1" stop-color="#1f3a8a"/></linearGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9ad"/><stop offset=".5" stop-color="#dca127"/><stop offset="1" stop-color="#9b6514"/></linearGradient>
+<radialGradient id="aura"><stop offset="0" stop-color="#fff1b0" stop-opacity=".95"/><stop offset=".5" stop-color="#bcd0ff" stop-opacity=".4"/><stop offset="1" stop-color="#bcd0ff" stop-opacity="0"/></radialGradient>
+<linearGradient id="carpet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a45a8"/><stop offset="1" stop-color="#172673"/></linearGradient>
+<linearGradient id="clear" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#13235a"/><stop offset="1" stop-color="#2c4fb5"/></linearGradient>
+<filter id="shadow" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#23305a" flood-opacity=".14"/></filter>
+<filter id="bloom" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<marker id="ah-2f64d6" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f64d6"/></marker>
+<marker id="ah-1596c4" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1596c4"/></marker>
+<marker id="ah-cf7a12" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#cf7a12"/></marker>
+<marker id="ah-0e8a8a" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0e8a8a"/></marker>
+<marker id="ah-138a58" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#138a58"/></marker>
+<marker id="ah-6d45c9" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6d45c9"/></marker>
+<symbol id="genie" viewBox="0 0 80 104" width="80" height="104"><path d="M40 62 C16 68 20 90 36 92 C52 94 46 103 30 102 C54 106 62 88 47 82 C37 78 45 68 56 66 Z" fill="#3e6ed8" opacity=".9"/><path d="M22 66 C22 48 58 48 58 66 L54 76 C46 80 34 80 26 76 Z" fill="#5b8ff5"/><path d="M27 53 C33 59 47 59 53 53 L51 73 C45 76 35 76 29 73 Z" fill="#1c2f6e"/><path d="M31 53 L40 72 L49 53" fill="none" stroke="#dca127" stroke-width="2.4"/><path d="M29 58 C31 62 33 64 35 65 M51 58 C49 62 47 64 45 65" fill="none" stroke="#dca127" stroke-width="1.4"/><ellipse cx="40" cy="34" rx="17" ry="18" fill="#5b8ff5"/><ellipse cx="23" cy="35" rx="3" ry="4.8" fill="#3e6ed8"/><ellipse cx="57" cy="35" rx="3" ry="4.8" fill="#3e6ed8"/><path d="M22 26 C22 5 58 5 58 26 C51 19 29 19 22 26 Z" fill="#22398f"/><path d="M40 9 C44 1 53 1 51 -5" fill="none" stroke="#22398f" stroke-width="4.5" stroke-linecap="round"/><circle cx="40" cy="20" r="3.8" fill="#dca127" stroke="#fff3c4" stroke-width="1.2"/><rect x="27.5" y="29" width="11" height="10" rx="4" fill="#eaf2ff" stroke="#14192a" stroke-width="2"/><rect x="41.5" y="29" width="11" height="10" rx="4" fill="#eaf2ff" stroke="#14192a" stroke-width="2"/><path d="M38.5 33 h3" stroke="#14192a" stroke-width="2"/><circle cx="33.5" cy="34.5" r="2" fill="#14192a"/><circle cx="47.5" cy="34.5" r="2" fill="#14192a"/><path d="M28 26 q5 -3 9 0 M43 26 q5 -3 9 0" fill="none" stroke="#14192a" stroke-width="1.8" stroke-linecap="round"/><path d="M33 43.5 q7 -4 14 0 q-7 2 -14 0 z" fill="#14192a"/><path d="M35 46.5 C38 49.5 42 49.5 45 46.5" fill="none" stroke="#14192a" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</defs>
+<rect width="1920" height="1080" fill="url(#bg)"/><rect width="1920" height="1080" fill="url(#grid)"/>
+<path d="M10 150 v-60 q0 -39 30 -39 q30 0 30 39 v60 z" fill="#efe4cc"/>
+<path d="M40 51 v-14" stroke="#efe4cc" stroke-width="2.5"/>
+<path d="M100 150 v-40 q0 -26 20 -26 q20 0 20 26 v40 z" fill="#efe4cc"/>
+<path d="M120 84 v-14" stroke="#efe4cc" stroke-width="2.5"/>
+<path d="M1754 150 v-50 q0 -33.8 26 -33.8 q26 0 26 33.8 v50 z" fill="#efe4cc"/>
+<path d="M1780 66.2 v-14" stroke="#efe4cc" stroke-width="2.5"/>
+<path d="M1836 150 v-64 q0 -44.2 34 -44.2 q34 0 34 44.2 v64 z" fill="#efe4cc"/>
+<path d="M1870 41.8 v-14" stroke="#efe4cc" stroke-width="2.5"/>
+<path d="M1700 150 v-48 a14 14 0 0 1 28 0 v48 z M1745 150 v-70 h12 v70 z" fill="#f1e7d2"/>
+<text x="48" y="56" font-size="23" fill="#1f3a8a" font-weight="400" text-anchor="start" font-family="Georgia, 'Times New Roman', serif" font-style="italic" transform="rotate(-4 48 56)">You state the intent.</text>
+<text x="66" y="88" font-size="23" fill="#1f3a8a" font-weight="400" text-anchor="start" font-family="Georgia, 'Times New Roman', serif" font-style="italic" transform="rotate(-4 66 88)">Aladin handles the rest.</text>
+<path d="M60 102 C140 112 230 104 300 90" fill="none" stroke="#dca127" stroke-width="3" stroke-linecap="round"/>
+<text x="960" y="62" font-size="58" fill="#13235a" font-weight="700" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif">Aladin’s Loop <tspan fill="#2f64d6" font-size="42">(aloop)</tspan></text>
+<text x="960" y="98" font-size="25" fill="#1b2540" font-weight="400" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif">Deterministic Autonomous Sprint Lifecycle</text>
+<text x="563.7" y="132" font-size="14" fill="#95600f" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">INTENT</text>
+<text x="639.3" y="132" font-size="15" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<text x="663.3" y="132" font-size="14" fill="#2f64d6" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">PLAN</text>
+<text x="717.7" y="132" font-size="15" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<text x="741.7" y="132" font-size="14" fill="#95600f" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">ORCHESTRATE</text>
+<text x="870.3" y="132" font-size="15" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<text x="894.3" y="132" font-size="14" fill="#6d45c9" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">EXECUTE</text>
+<text x="980.5" y="132" font-size="15" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<text x="1004.5" y="132" font-size="14" fill="#138a58" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">VERIFY</text>
+<text x="1080.1" y="132" font-size="15" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<text x="1104.1" y="132" font-size="14" fill="#0e8a8a" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">RECORD</text>
+<text x="1179.7" y="132" font-size="15" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<text x="1203.7" y="132" font-size="14" fill="#1f3a8a" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">CLEAR</text>
+<text x="1268.7" y="132" font-size="15" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<text x="1292.7" y="132" font-size="14" fill="#2f64d6" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">RESUME</text>
+<rect x="1560" y="18" width="300" height="50" rx="16" fill="#ffffff" stroke="#cdd8ee" stroke-width="1.2" />
+<text x="1710" y="38" font-size="11" fill="#1f3a8a" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="0.8">OPEN SOURCE · MODEL AGNOSTIC</text>
+<text x="1710" y="56" font-size="11" fill="#1f3a8a" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="0.8">DETERMINISTIC · BUILT FOR DEVELOPERS</text>
+<text x="1710" y="94" font-size="19" fill="#95600f" font-weight="400" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-style="italic">Small sprints. Big progress.</text>
+<text x="1710" y="120" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-style="italic">runs on Claude Code · Codex · OpenCode</text>
+<rect x="18" y="150" width="280" height="410" rx="18" fill="url(#glass)" stroke="#13235a" stroke-width="1.8" filter="url(#shadow)"/>
+<path d="M36 150 h244 a18 18 0 0 1 18 18 v34 h-280 v-34 a18 18 0 0 1 18 -18 z" fill="url(#head)"/>
+<text x="36" y="185" font-size="22" fill="#dca127" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">1.</text>
+<text x="62" y="185" font-size="21" fill="#ffffff" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">Inputs / Setup</text>
+<text x="158" y="226" font-size="13.5" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">You give the intent. A Genie captures it.</text>
+<path d="M38 288 C58 270 78 278 92 290" fill="none" stroke="#dca127" stroke-width="2.5" stroke-dasharray="3 5" opacity=".8"/>
+<text x="32" y="282" font-size="12" fill="#95600f" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">you</text>
+<use href="#genie" transform="translate(88 246) scale(1.22)"/>
+<g transform="translate(88 246) scale(1.22)"><g transform="translate(54 40) rotate(-10)"><rect width="48" height="58" rx="4" fill="#f6e2ab" stroke="#95600f" stroke-width="2"/><rect x="-4" y="-4" width="56" height="66" rx="7" fill="none" stroke="#dca127" stroke-opacity=".45" stroke-width="3"/><text x="24" y="16" font-size="10" font-weight="700" fill="#6b4312" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif">INTENT</text><path d="M8 27 h32 M8 35 h32 M8 43 h22" stroke="#b07a2a" stroke-width="2"/></g></g>
+<g transform="translate(34 399) scale(1)"><rect x="0" y="1" width="20" height="15" rx="4" fill="none" stroke="#2f64d6" stroke-width="2"/><path d="M5 16 l-2 5 l6 -5" fill="#2f64d6"/><circle cx="6" cy="8.5" r="1.5" fill="#2f64d6"/><circle cx="10" cy="8.5" r="1.5" fill="#2f64d6"/><circle cx="14" cy="8.5" r="1.5" fill="#2f64d6"/></g>
+<text x="64" y="414" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">User goal / intent</text>
+<text x="64" y="432" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">feature · bug · change</text>
+<g transform="translate(34 449) scale(1)"><path d="M3 0 h10 l6 6 v14 h-16 z" fill="none" stroke="#2f64d6" stroke-width="2"/><path d="M6 10 h9 M6 14 h9" stroke="#2f64d6" stroke-width="1.6"/></g>
+<text x="64" y="464" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">defaults.md</text>
+<text x="64" y="482" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">config · constraints (init)</text>
+<g transform="translate(34 499) scale(1)"><rect x="1" y="1" width="7" height="6" rx="1.5" fill="none" stroke="#2f64d6" stroke-width="1.8"/><rect x="12" y="7" width="7" height="6" rx="1.5" fill="none" stroke="#2f64d6" stroke-width="1.8"/><rect x="12" y="15" width="7" height="5" rx="1.5" fill="none" stroke="#2f64d6" stroke-width="1.8"/><path d="M4.5 7 v10.5 h7.5 M4.5 10 h7.5" fill="none" stroke="#2f64d6" stroke-width="1.6"/></g>
+<text x="64" y="514" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NEXT.md carry-over</text>
+<text x="64" y="532" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">backlog · out-of-scope</text>
+<rect x="318" y="150" width="290" height="410" rx="18" fill="url(#glass)" stroke="#13235a" stroke-width="1.8" filter="url(#shadow)"/>
+<path d="M336 150 h254 a18 18 0 0 1 18 18 v34 h-290 v-34 a18 18 0 0 1 18 -18 z" fill="url(#head)"/>
+<text x="336" y="185" font-size="22" fill="#dca127" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">2.</text>
+<text x="362" y="185" font-size="21" fill="#ffffff" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">Planning Layer</text>
+<text x="463" y="226" font-size="15.5" fill="#2f64d6" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Planner Genie (Opus 5.5)</text>
+<text x="463" y="246" font-size="12.8" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Decomposes intent into an executable,</text>
+<text x="463" y="263" font-size="12.8" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">deterministic, self-contained plan.</text>
+<use href="#genie" transform="translate(376 272) scale(1.08)"/>
+<g transform="translate(376 272) scale(1.08)"><g transform="translate(54 38) rotate(6)"><rect width="54" height="60" rx="4" fill="#eef4ff" stroke="#2f64d6" stroke-width="2"/><text x="27" y="14" font-size="9" font-weight="700" fill="#2f64d6" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">plan.md</text><rect x="20" y="20" width="14" height="8" rx="2" fill="#2f64d6"/><rect x="5" y="38" width="14" height="8" rx="2" fill="#1596c4"/><rect x="35" y="38" width="14" height="8" rx="2" fill="#1596c4"/><path d="M27 28 v5 M12 38 v-5 h30 v5" fill="none" stroke="#2f64d6" stroke-width="1.6"/></g></g>
+<g transform="translate(334 397) scale(1)"><rect x="1" y="1" width="7" height="6" rx="1.5" fill="none" stroke="#2f64d6" stroke-width="1.8"/><rect x="12" y="7" width="7" height="6" rx="1.5" fill="none" stroke="#2f64d6" stroke-width="1.8"/><rect x="12" y="15" width="7" height="5" rx="1.5" fill="none" stroke="#2f64d6" stroke-width="1.8"/><path d="M4.5 7 v10.5 h7.5 M4.5 10 h7.5" fill="none" stroke="#2f64d6" stroke-width="1.6"/></g>
+<text x="364" y="412" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Break down tasks</text>
+<text x="364" y="430" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stories → tasks</text>
+<g transform="translate(334 435) scale(1)"><path d="M10 0 l9 4 v6 c0 6 -4 9 -9 11 c-5 -2 -9 -5 -9 -11 v-6 z" fill="none" stroke="#2f64d6" stroke-width="2"/><path d="M6 10 l3 3 l5 -6" fill="none" stroke="#2f64d6" stroke-width="2"/></g>
+<text x="364" y="450" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Apply rules &amp; constraints</text>
+<text x="364" y="468" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">standards.md</text>
+<g transform="translate(334 473) scale(1)"><rect x="2" y="8" width="16" height="12" rx="2.5" fill="none" stroke="#2f64d6" stroke-width="2"/><path d="M6 8 v-3 a4 4 0 0 1 8 0 v3" fill="none" stroke="#2f64d6" stroke-width="2"/></g>
+<text x="364" y="488" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Create deterministic plan</text>
+<text x="364" y="506" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">tests-only · waves</text>
+<g transform="translate(334 511) scale(1)"><path d="M3 0 h10 l6 6 v14 h-16 z" fill="none" stroke="#2f64d6" stroke-width="2"/><path d="M6 10 h9 M6 14 h9" stroke="#2f64d6" stroke-width="1.6"/></g>
+<text x="364" y="526" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Output sprint plan</text>
+<text x="364" y="544" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">sprintN/plan.md</text>
+<rect x="628" y="150" width="540" height="410" rx="18" fill="url(#glass)" stroke="#13235a" stroke-width="1.8" filter="url(#shadow)"/>
+<path d="M646 150 h504 a18 18 0 0 1 18 18 v34 h-540 v-34 a18 18 0 0 1 18 -18 z" fill="url(#head)"/>
+<text x="646" y="185" font-size="22" fill="#dca127" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">3.</text>
+<text x="672" y="185" font-size="21" fill="#ffffff" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">Orchestration Core</text>
+<text x="898" y="230" font-size="21" fill="#95600f" font-weight="700" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif">Aladin Orchestrator (Sonnet)</text>
+<text x="898" y="252" font-size="14" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Monitors, coordinates, tracks, and adapts.</text>
+<rect x="644" y="272" width="176" height="62" rx="12" fill="#fff3d3" stroke="#e8c874" stroke-width="1.4" filter="url(#bloom)"/>
+<g transform="translate(654 284) scale(0.95)"><rect x="1" y="11" width="4" height="8" rx="1" fill="#95600f"/><rect x="8" y="6" width="4" height="13" rx="1" fill="#95600f"/><rect x="15" y="1" width="4" height="18" rx="1" fill="#95600f"/></g>
+<text x="680" y="297" font-size="12.2" fill="#1b2540" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Track Progress</text>
+<text x="680" y="317" font-size="11" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">execution.log</text>
+<rect x="644" y="346" width="176" height="62" rx="12" fill="#fff3d3" stroke="#e8c874" stroke-width="1.4" filter="url(#bloom)"/>
+<g transform="translate(654 358) scale(0.95)"><path d="M2 16 a8 8 0 0 1 16 0" fill="none" stroke="#95600f" stroke-width="2.4"/><path d="M10 16 l5 -6" stroke="#95600f" stroke-width="2.2" stroke-linecap="round"/><circle cx="10" cy="16" r="2" fill="#95600f"/></g>
+<text x="680" y="371" font-size="12.2" fill="#1b2540" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Manage Token Budget</text>
+<text x="682" y="388" font-size="9.5" fill="#5a6683" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">tok</text>
+<rect x="706" y="381" width="48" height="7" rx="3.5" fill="#fff" stroke="#e0c27a" stroke-width="1" />
+<rect x="706" y="381" width="29.76" height="7" rx="3.5" fill="#dca127" stroke="none" stroke-width="0" />
+<line x1="734.8" y1="379" x2="734.8" y2="390" stroke="#b33" stroke-width="1.5"/>
+<text x="758" y="388" font-size="9" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">150k/250k</text>
+<text x="682" y="400" font-size="9.5" fill="#5a6683" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">time</text>
+<rect x="706" y="393" width="48" height="7" rx="3.5" fill="#fff" stroke="#e0c27a" stroke-width="1" />
+<rect x="706" y="393" width="21.6" height="7" rx="3.5" fill="#dca127" stroke="none" stroke-width="0" />
+<line x1="734.8" y1="391" x2="734.8" y2="402" stroke="#b33" stroke-width="1.5"/>
+<text x="758" y="400" font-size="9" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">20/30m</text>
+<rect x="644" y="420" width="176" height="62" rx="12" fill="#fff3d3" stroke="#e8c874" stroke-width="1.4" filter="url(#bloom)"/>
+<g transform="translate(654 432) scale(0.95)"><path d="M10 1 l9.5 17 h-19 z" fill="none" stroke="#95600f" stroke-width="2" stroke-linejoin="round"/><path d="M10 7 v5" stroke="#95600f" stroke-width="2.2" stroke-linecap="round"/><circle cx="10" cy="15" r="1.3" fill="#95600f"/></g>
+<text x="680" y="445" font-size="12.2" fill="#1b2540" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Detect Issues</text>
+<text x="680" y="465" font-size="11" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">gate verdicts</text>
+<rect x="976" y="272" width="176" height="62" rx="12" fill="#fff3d3" stroke="#e8c874" stroke-width="1.4" filter="url(#bloom)"/>
+<g transform="translate(986 284) scale(0.95)"><path d="M16 6 a7.5 7.5 0 1 0 1.5 6" fill="none" stroke="#95600f" stroke-width="2.2"/><path d="M12 5 h5 v-5" fill="none" stroke="#95600f" stroke-width="2.2"/></g>
+<text x="1012" y="297" font-size="12.2" fill="#1b2540" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Mid-sprint Re-planning</text>
+<text x="1012" y="317" font-size="11" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">split, don’t retry</text>
+<rect x="976" y="346" width="176" height="62" rx="12" fill="#fff3d3" stroke="#e8c874" stroke-width="1.4" filter="url(#bloom)"/>
+<g transform="translate(986 358) scale(0.95)"><circle cx="6" cy="6" r="3.5" fill="#95600f"/><circle cx="14" cy="6" r="3.5" fill="#95600f"/><path d="M0 18 c0 -6 12 -6 12 0 M8 18 c0 -6 12 -6 12 0" fill="#95600f"/></g>
+<text x="1012" y="371" font-size="12.2" fill="#1b2540" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Coordinate Subagents</text>
+<text x="1012" y="391" font-size="11" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">waves · worktrees</text>
+<rect x="976" y="420" width="176" height="62" rx="12" fill="#fff3d3" stroke="#e8c874" stroke-width="1.4" filter="url(#bloom)"/>
+<g transform="translate(986 432) scale(0.95)"><rect x="2" y="8" width="16" height="12" rx="2.5" fill="none" stroke="#95600f" stroke-width="2"/><path d="M6 8 v-3 a4 4 0 0 1 8 0 v3" fill="none" stroke="#95600f" stroke-width="2"/></g>
+<text x="1012" y="445" font-size="12.2" fill="#1b2540" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Ensure Determinism</text>
+<text x="1012" y="465" font-size="11" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">hooks, not goodwill</text>
+<circle cx="898" cy="400" r="120" fill="url(#aura)"/>
+<path id="inf" d="M898 390 C926 340 964 360 964 390 C964 420 926 440 898 390 C870 340 832 360 832 390 C832 420 870 440 898 390 Z" fill="none" stroke="#8fb2ff" stroke-width="10" stroke-opacity=".35" stroke-linecap="round"/>
+<path d="M898 390 C926 340 964 360 964 390 C964 420 926 440 898 390 C870 340 832 360 832 390 C832 420 870 440 898 390 Z" fill="none" stroke="#6f97f5" stroke-width="2.4" stroke-opacity=".85"/>
+<text x="898" y="548" font-size="11.5" fill="#1f3a8a" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">PLAN → EXECUTE → VERIFY → LEARN → REPEAT</text>
+<path d="M950 494 C968 470 918 454 908 434" fill="none" stroke="#8fb2ff" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+<use href="#genie" transform="translate(844 298) scale(1.3)"/>
+<g transform="translate(844 298) scale(1.3)"><path d="M56 60 L86 22" stroke="#95600f" stroke-width="3.6" stroke-linecap="round"/><circle cx="87" cy="20" r="5.5" fill="#fff4b8"/><circle cx="87" cy="20" r="12" fill="#ffe27a" opacity=".4"/><path d="M87 5 v6 M87 29 v6 M72 20 h6 M96 20 h6" stroke="#dca127" stroke-width="2" stroke-linecap="round"/></g>
+<g transform="translate(818 474)"><path d="M22 32 C22 12 114 12 114 32 C114 44 98 50 68 50 C36 50 22 44 22 32 Z" fill="url(#gold)" stroke="#86560f" stroke-width="1.6"/><path d="M114 28 C130 26 146 14 154 2 C150 20 138 34 116 40" fill="url(#gold)" stroke="#86560f" stroke-width="1.6"/><path d="M22 30 C4 26 2 44 18 44" fill="none" stroke="#95600f" stroke-width="5.5" stroke-linecap="round"/><ellipse cx="68" cy="15" rx="26" ry="7" fill="url(#gold)" stroke="#86560f" stroke-width="1.3"/><circle cx="68" cy="6" r="4.5" fill="#dca127"/><path d="M40 24 h56" stroke="#fff3c4" stroke-width="1.2" opacity=".8"/><rect x="44" y="50" width="48" height="9" rx="3" fill="url(#gold)" stroke="#86560f" stroke-width="1.3"/><text x="68" y="39" font-size="8.6" font-weight="800" fill="#4a2f0a" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" letter-spacing=".4">ALADIN’S LOOP</text></g>
+<rect x="1188" y="150" width="410" height="410" rx="18" fill="url(#glass)" stroke="#6d45c9" stroke-width="1.8" filter="url(#shadow)"/>
+<path d="M1206 150 h374 a18 18 0 0 1 18 18 v34 h-410 v-34 a18 18 0 0 1 18 -18 z" fill="url(#head)"/>
+<text x="1206" y="185" font-size="22" fill="#dca127" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">4.</text>
+<text x="1232" y="185" font-size="21" fill="#ffffff" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">Execution Layer</text>
+<text x="1393" y="226" font-size="13.5" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Specialized worker Genies (Sonnet) execute</text>
+<text x="1393" y="244" font-size="13.5" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">tasks in parallel — one isolated worktree each.</text>
+<rect x="1201" y="260" width="186" height="126" rx="12" fill="#f1ecfd" stroke="#cdbdf3" stroke-width="1.2" />
+<use href="#genie" transform="translate(1219 262) scale(0.86)"/>
+<g transform="translate(1219 262) scale(0.86)"><g transform="translate(56 56)"><rect width="36" height="24" rx="3" fill="#1e2842" stroke="#7f9cd9" stroke-width="1.5"/><path d="M5 7 h12 M9 12 h18 M9 17 h10" stroke="#8fd3a8" stroke-width="1.8"/><rect x="-4" y="24" width="44" height="4" rx="2" fill="#7f9cd9"/></g></g>
+<text x="1294" y="360" font-size="13.5" fill="#6d45c9" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Subagent A — Build</text>
+<text x="1294" y="377" font-size="11.8" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">SCAFFOLD → GREEN</text>
+<rect x="1399" y="260" width="186" height="126" rx="12" fill="#f1ecfd" stroke="#cdbdf3" stroke-width="1.2" />
+<use href="#genie" transform="translate(1417 262) scale(0.86)"/>
+<g transform="translate(1417 262) scale(0.86)"><g transform="translate(56 52)"><rect width="38" height="28" rx="3" fill="#10182c" stroke="#7f9cd9" stroke-width="1.5"/><path d="M5 8 l5 4 l-5 4" fill="none" stroke="#7df0c0" stroke-width="2"/><path d="M13 17 h10" stroke="#7df0c0" stroke-width="2"/><text x="30" y="23" font-size="7" fill="#ff8a7a" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">✗</text></g></g>
+<text x="1492" y="360" font-size="13.5" fill="#6d45c9" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Subagent B — Test</text>
+<text x="1492" y="377" font-size="11.8" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">RED: failing tests first</text>
+<rect x="1201" y="396" width="186" height="126" rx="12" fill="#f1ecfd" stroke="#cdbdf3" stroke-width="1.2" />
+<use href="#genie" transform="translate(1219 398) scale(0.86)"/>
+<g transform="translate(1219 398) scale(0.86)"><g transform="translate(58 44)"><circle cx="13" cy="13" r="11" fill="#dff1ff" fill-opacity=".75" stroke="#95600f" stroke-width="3"/><path d="M8 11 l-3 3 l3 3 M18 11 l3 3 l-3 3" fill="none" stroke="#2f64d6" stroke-width="1.6"/><path d="M21 21 l12 12" stroke="#95600f" stroke-width="5" stroke-linecap="round"/></g></g>
+<text x="1294" y="496" font-size="13.5" fill="#6d45c9" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Reviewer — Quality</text>
+<text x="1294" y="513" font-size="11.8" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">structure · duplicates</text>
+<rect x="1399" y="396" width="186" height="126" rx="12" fill="#f1ecfd" stroke="#cdbdf3" stroke-width="1.2" />
+<use href="#genie" transform="translate(1417 398) scale(0.86)"/>
+<g transform="translate(1417 398) scale(0.86)"><g transform="translate(56 44)"><rect width="36" height="46" rx="3" fill="#fff" stroke="#8a97b4" stroke-width="1.6"/><rect x="4" y="7" width="15" height="9" rx="2" fill="#138a58"/><text x="11.5" y="14" font-size="6.5" font-weight="700" fill="#fff" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">PASS</text><rect x="4" y="21" width="15" height="9" rx="2" fill="#138a58"/><text x="11.5" y="28" font-size="6.5" font-weight="700" fill="#fff" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">PASS</text><rect x="4" y="35" width="15" height="9" rx="2" fill="#d9534f"/><text x="11.5" y="42" font-size="6.5" font-weight="700" fill="#fff" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">FAIL</text><path d="M23 11 h9 M23 25 h9 M23 39 h9" stroke="#8a97b4" stroke-width="1.8"/></g></g>
+<text x="1492" y="496" font-size="13.5" fill="#6d45c9" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Verifier — Checks</text>
+<text x="1492" y="513" font-size="11.8" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">gates · PASS / FAIL</text>
+<text x="1393" y="546" font-size="11.8" fill="#6d45c9" font-weight="650" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">every stop is gated by a hook · a block keeps the worker working (≤3)</text>
+<rect x="1618" y="150" width="284" height="410" rx="18" fill="url(#glass)" stroke="#138a58" stroke-width="1.8" filter="url(#shadow)"/>
+<path d="M1636 150 h248 a18 18 0 0 1 18 18 v34 h-284 v-34 a18 18 0 0 1 18 -18 z" fill="url(#head)"/>
+<text x="1636" y="185" font-size="22" fill="#dca127" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">7.</text>
+<text x="1662" y="185" font-size="21" fill="#ffffff" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">Outcomes</text>
+<text x="1760" y="226" font-size="13.5" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Sprint complete. Context cleared.</text>
+<text x="1760" y="244" font-size="13.5" fill="#5a6683" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Ready for next.</text>
+<use href="#genie" transform="translate(1646 254) scale(1.02)"/>
+<g transform="translate(1646 254) scale(1.02)"><g transform="translate(58 42)"><path d="M4 22 h8 v16 h-8 z" fill="#3e6ed8"/><path d="M12 22 l6 -12 c2 -4 7 -2 6 2 l-2 8 h9 c3 0 4 3 3 5 l-3 12 c-1 2 -2 3 -4 3 h-15 z" fill="#5b8ff5"/></g></g>
+<circle cx="1824" cy="308" r="34" fill="#138a58" filter="url(#bloom)"/><path d="M1809 308 l10 10 l20 -22" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+<g transform="translate(1636 383) scale(1)"><circle cx="10" cy="10" r="10" fill="#138a58"/><path d="M5 10.5 l3.5 3.5 l6.5 -7.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></g>
+<text x="1666" y="398" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Completed Sprint</text>
+<text x="1666" y="416" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">final gate green</text>
+<path d="M1646 405 L1646 420" fill="none" stroke="#138a58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-138a58)"/>
+<g transform="translate(1636 425) scale(1)"><circle cx="10" cy="10" r="10" fill="#138a58"/><path d="M5 10.5 l3.5 3.5 l6.5 -7.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></g>
+<text x="1666" y="440" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Artifacts Recorded</text>
+<text x="1666" y="458" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stats.md · NEXT.md</text>
+<path d="M1646 447 L1646 462" fill="none" stroke="#138a58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-138a58)"/>
+<g transform="translate(1636 467) scale(1)"><circle cx="10" cy="10" r="10" fill="#138a58"/><path d="M5 10.5 l3.5 3.5 l6.5 -7.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></g>
+<text x="1666" y="482" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Context Clear</text>
+<text x="1666" y="500" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">runtime /clear</text>
+<path d="M1646 489 L1646 504" fill="none" stroke="#138a58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-138a58)"/>
+<g transform="translate(1636 509) scale(1)"><circle cx="10" cy="10" r="10" fill="#2f64d6"/><path d="M8 5.5 l7 4.5 l-7 4.5 z" fill="#fff"/></g>
+<text x="1666" y="524" font-size="15" fill="#1b2540" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Next Sprint Resume</text>
+<text x="1666" y="542" font-size="12.5" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">reads NEXT.md</text>
+<path d="M301 336 L313 336" fill="none" stroke="#1596c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-1596c4)"/>
+<text x="311" y="356" font-size="10.5" fill="#95600f" font-weight="800" text-anchor="end" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1" transform="rotate(-90 311 356)">INTENT IN</text>
+<path d="M611 336 L623 336" fill="none" stroke="#1596c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-1596c4)"/>
+<text x="621" y="356" font-size="10.5" fill="#2f64d6" font-weight="800" text-anchor="end" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1" transform="rotate(-90 621 356)">PLAN</text>
+<path d="M1171 336 L1183 336" fill="none" stroke="#1596c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-1596c4)"/>
+<text x="1181" y="356" font-size="10.5" fill="#6d45c9" font-weight="800" text-anchor="end" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1" transform="rotate(-90 1181 356)">EXECUTE</text>
+<path d="M1601 336 L1613 336" fill="none" stroke="#1596c4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-1596c4)"/>
+<text x="1611" y="356" font-size="10.5" fill="#138a58" font-weight="800" text-anchor="end" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1" transform="rotate(-90 1611 356)">VERIFY</text>
+<path d="M1248 562 V590 H518 V566" fill="none" stroke="#cf7a12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 7" marker-end="url(#ah-cf7a12)"/>
+<rect x="642.47" y="577" width="91.06" height="26" rx="13" fill="#fff8ec" stroke="#cf7a12" stroke-width="1.5" />
+<text x="688" y="594.5" font-size="13" fill="#cf7a12" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1">RE-PLAN</text>
+<rect x="741.53" y="578" width="930.45" height="24" rx="12" fill="#fff8ec" stroke="#f0cf98" stroke-width="1" />
+<text x="751.53" y="594.5" font-size="12" fill="#8a520c" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">worker stopped at hard budget / fails  →  evidence kept, partial work NOT merged  →  planner splits the task  →  resume from accepted state</text>
+<path d="M1820 562 V622" fill="none" stroke="#0e8a8a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-0e8a8a)"/>
+<rect x="1470" y="622" width="440" height="60" rx="14" fill="#e3f6f5" stroke="#0e8a8a" stroke-width="1.5" />
+<text x="1690" y="646" font-size="14" fill="#0e8a8a" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1.5">SPRINT N · CHECKPOINT</text>
+<text x="1690" y="668" font-size="12.2" fill="#1b2540" font-weight="400" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">execute → verify → stats.md + NEXT.md → checkpoint</text>
+<rect x="930" y="622" width="470" height="60" rx="14" fill="url(#clear)" stroke="#13235a" stroke-width="1.5" filter="url(#shadow)"/>
+<text x="1165" y="646" font-size="14.5" fill="#ffffff" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="2">DETERMINISTIC CONTEXT CLEAR</text>
+<text x="1165" y="668" font-size="12.2" fill="#cfdcff" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">runtime, not the genie: Stop hook → /clear → SessionStart</text>
+<rect x="420" y="622" width="440" height="60" rx="14" fill="#eaf1ff" stroke="#2f64d6" stroke-width="1.5" />
+<text x="640" y="646" font-size="14" fill="#2f64d6" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1.5">FRESH CONTEXT</text>
+<text x="640" y="668" font-size="12.2" fill="#1b2540" font-weight="400" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">read NEXT.md → determine next sprint → resume</text>
+<path d="M1466 652 L1408 652" fill="none" stroke="#0e8a8a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-0e8a8a)"/>
+<path d="M926 652 L868 652" fill="none" stroke="#2f64d6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-2f64d6)"/>
+<path d="M416 652 H378 V566" fill="none" stroke="#2f64d6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-2f64d6)"/>
+<rect x="48.66" y="617" width="282.68" height="26" rx="13" fill="#eef4ff" stroke="#2f64d6" stroke-width="1.5" />
+<text x="190" y="634.5" font-size="12" fill="#2f64d6" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1">REPEAT UNTIL PROJECT COMPLETE</text>
+<text x="190" y="662" font-size="12" fill="#0e8a8a" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-style="italic">the repo carries the memory forward</text>
+<rect x="18" y="714" width="1250" height="292" rx="18" fill="url(#glass)" stroke="#1596c4" stroke-width="1.8" filter="url(#shadow)"/>
+<path d="M36 714 h1214 a18 18 0 0 1 18 18 v34 h-1250 v-34 a18 18 0 0 1 18 -18 z" fill="url(#head)"/>
+<text x="36" y="749" font-size="22" fill="#dca127" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">5.</text>
+<text x="62" y="749" font-size="21" fill="#ffffff" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">Tooling / Runtime Layer</text>
+<text x="378" y="748" font-size="14" fill="#cfe0ff" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-style="italic">Deterministic tools. Outside model control.</text>
+<text x="1248" y="748" font-size="14" fill="#f3d99a" font-weight="400" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-style="italic">Automate the grind. Keep the thinking.</text>
+<use href="#genie" transform="translate(42 806) scale(1.12)"/>
+<g transform="translate(42 806) scale(1.12)"><g transform="translate(50 70)"><rect x="0" y="8" width="54" height="28" rx="4" fill="#9a5b22" stroke="#6b3c12" stroke-width="2"/><path d="M17 8 v-6 h20 v6" fill="none" stroke="#6b3c12" stroke-width="3"/><rect x="0" y="16" width="54" height="4" fill="#6b3c12"/><path d="M42 8 l10 -18" stroke="#9aa6bf" stroke-width="4" stroke-linecap="round"/><circle cx="53" cy="-12" r="4" fill="none" stroke="#9aa6bf" stroke-width="2.5"/></g></g>
+<rect x="168" y="788" width="168" height="62" rx="12" fill="#eef6ff" stroke="#b8d3f2" stroke-width="1.3" />
+<g transform="translate(178 799) scale(0.8)"><path d="M6 4 l-5 6 l5 6 M14 4 l5 6 l-5 6" fill="none" stroke="#1596c4" stroke-width="2.2" stroke-linecap="round"/></g>
+<text x="202" y="814" font-size="14" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">selfcheck</text>
+<text x="180" y="836" font-size="12" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">lint · test · validate</text>
+<rect x="348" y="788" width="168" height="62" rx="12" fill="#eef6ff" stroke="#b8d3f2" stroke-width="1.3" />
+<g transform="translate(358 799) scale(0.8)"><path d="M6 4 l-5 6 l5 6 M14 4 l5 6 l-5 6" fill="none" stroke="#1596c4" stroke-width="2.2" stroke-linecap="round"/></g>
+<text x="382" y="814" font-size="14" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">md-db</text>
+<text x="360" y="836" font-size="12" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">schema-check docs</text>
+<rect x="528" y="788" width="168" height="62" rx="12" fill="#eef6ff" stroke="#b8d3f2" stroke-width="1.3" />
+<g transform="translate(538 799) scale(0.8)"><path d="M6 4 l-5 6 l5 6 M14 4 l5 6 l-5 6" fill="none" stroke="#1596c4" stroke-width="2.2" stroke-linecap="round"/></g>
+<text x="562" y="814" font-size="14" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">ctx-symbols</text>
+<text x="540" y="836" font-size="12" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">code context</text>
+<rect x="708" y="788" width="168" height="62" rx="12" fill="#eef6ff" stroke="#b8d3f2" stroke-width="1.3" />
+<g transform="translate(718 799) scale(0.8)"><path d="M6 4 l-5 6 l5 6 M14 4 l5 6 l-5 6" fill="none" stroke="#1596c4" stroke-width="2.2" stroke-linecap="round"/></g>
+<text x="742" y="814" font-size="14" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">gate-tooling</text>
+<text x="720" y="836" font-size="12" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">policies · enforcement</text>
+<rect x="888" y="788" width="168" height="62" rx="12" fill="#eef6ff" stroke="#b8d3f2" stroke-width="1.3" />
+<g transform="translate(898 799) scale(0.8)"><path d="M6 4 l-5 6 l5 6 M14 4 l5 6 l-5 6" fill="none" stroke="#1596c4" stroke-width="2.2" stroke-linecap="round"/></g>
+<text x="922" y="814" font-size="14" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">budget</text>
+<text x="900" y="836" font-size="12" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">time box · hard stop</text>
+<rect x="1068" y="788" width="168" height="62" rx="12" fill="#eef6ff" stroke="#b8d3f2" stroke-width="1.3" />
+<g transform="translate(1078 799) scale(0.8)"><path d="M6 4 l-5 6 l5 6 M14 4 l5 6 l-5 6" fill="none" stroke="#1596c4" stroke-width="2.2" stroke-linecap="round"/></g>
+<text x="1102" y="814" font-size="14" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stats</text>
+<text x="1080" y="836" font-size="12" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">token ledger · stats</text>
+<text x="168" y="878" font-size="11.5" fill="#5a6683" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1">HOOK LAYER — fires on every event, on every host (hooks.json · OpenCode plugin)</text>
+<rect x="168" y="892" width="204" height="60" rx="10" fill="#ffffff" stroke="#c7d6ef" stroke-width="1.2" />
+<g transform="translate(178 902) scale(0.8)"><path d="M10 1 v10 a5 5 0 1 1 -8 -4" fill="none" stroke="#1f3a8a" stroke-width="2.4" stroke-linecap="round"/><circle cx="10" cy="2" r="2" fill="#1f3a8a"/></g>
+<text x="198" y="917" font-size="13.5" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">SessionStart</text>
+<text x="180" y="939" font-size="11.8" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">build tools · load NEXT.md</text>
+<rect x="384" y="892" width="204" height="60" rx="10" fill="#ffffff" stroke="#c7d6ef" stroke-width="1.2" />
+<g transform="translate(394 902) scale(0.8)"><path d="M10 1 v10 a5 5 0 1 1 -8 -4" fill="none" stroke="#1f3a8a" stroke-width="2.4" stroke-linecap="round"/><circle cx="10" cy="2" r="2" fill="#1f3a8a"/></g>
+<text x="414" y="917" font-size="13.5" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">PreToolUse</text>
+<text x="396" y="939" font-size="11.8" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">scope · commit author · isolation</text>
+<rect x="600" y="892" width="204" height="60" rx="10" fill="#ffffff" stroke="#c7d6ef" stroke-width="1.2" />
+<g transform="translate(610 902) scale(0.8)"><path d="M10 1 v10 a5 5 0 1 1 -8 -4" fill="none" stroke="#1f3a8a" stroke-width="2.4" stroke-linecap="round"/><circle cx="10" cy="2" r="2" fill="#1f3a8a"/></g>
+<text x="630" y="917" font-size="13.5" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">PostToolUse</text>
+<text x="612" y="939" font-size="11.8" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">budget warn / stop · record</text>
+<rect x="816" y="892" width="204" height="60" rx="10" fill="#ffffff" stroke="#c7d6ef" stroke-width="1.2" />
+<g transform="translate(826 902) scale(0.8)"><path d="M10 1 v10 a5 5 0 1 1 -8 -4" fill="none" stroke="#1f3a8a" stroke-width="2.4" stroke-linecap="round"/><circle cx="10" cy="2" r="2" fill="#1f3a8a"/></g>
+<text x="846" y="917" font-size="13.5" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">SubagentStop</text>
+<text x="828" y="939" font-size="11.8" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">role gate · keep working</text>
+<rect x="1032" y="892" width="204" height="60" rx="10" fill="#ffffff" stroke="#c7d6ef" stroke-width="1.2" />
+<g transform="translate(1042 902) scale(0.8)"><path d="M10 1 v10 a5 5 0 1 1 -8 -4" fill="none" stroke="#1f3a8a" stroke-width="2.4" stroke-linecap="round"/><circle cx="10" cy="2" r="2" fill="#1f3a8a"/></g>
+<text x="1062" y="917" font-size="13.5" fill="#1f3a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Stop</text>
+<text x="1044" y="939" font-size="11.8" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">ledger · sprint totals</text>
+<text x="168" y="984" font-size="12" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">all callable as `agentic &lt;tool&gt;` · md-db + ctx-symbols auto-built · no model reasoning inside</text>
+<path d="M768 684 V708" fill="none" stroke="#1596c4" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-1596c4)"/>
+<path d="M1388 684 V708" fill="none" stroke="#1596c4" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-1596c4)"/>
+<rect x="735.35" y="685" width="65.3" height="26" rx="13" fill="#ffffff" stroke="#1596c4" stroke-width="1.5" />
+<text x="768" y="702.5" font-size="11" fill="#1596c4" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1">TOOLS</text>
+<rect x="1355.35" y="685" width="65.3" height="26" rx="13" fill="#ffffff" stroke="#1596c4" stroke-width="1.5" />
+<text x="1388" y="702.5" font-size="11" fill="#1596c4" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1">TOOLS</text>
+<rect x="1288" y="714" width="614" height="292" rx="18" fill="url(#glass)" stroke="#0e8a8a" stroke-width="1.8" filter="url(#shadow)"/>
+<path d="M1306 714 h578 a18 18 0 0 1 18 18 v34 h-614 v-34 a18 18 0 0 1 18 -18 z" fill="url(#head)"/>
+<text x="1306" y="749" font-size="22" fill="#dca127" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">6.</text>
+<text x="1332" y="749" font-size="21" fill="#ffffff" font-weight="700" text-anchor="start" font-family="Georgia, 'Times New Roman', serif">Deterministic State / Artifacts</text>
+<text x="1306" y="790" font-size="14.5" fill="#0e8a8a" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Everything is recorded. The repo is the source of truth.</text>
+<text x="1306" y="810" font-size="13" fill="#5a6683" font-weight="400" text-anchor="start" font-family="Georgia, 'Times New Roman', serif" font-style="italic">Artifacts are the memory. Everything else is ephemeral.</text>
+<text x="1310" y="838" font-size="12.8" fill="#1f3a8a" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">docs/agents/</text>
+<text x="1310" y="857" font-size="12.8" fill="#1b2540" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">├── defaults.md</text>
+<text x="1310" y="876" font-size="12.8" fill="#1b2540" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">├── NEXT.md  ← read on resume</text>
+<text x="1310" y="895" font-size="12.8" fill="#1b2540" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">├── memory.md</text>
+<text x="1310" y="914" font-size="12.8" fill="#1b2540" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">└── sprintN/</text>
+<text x="1310" y="933" font-size="12.8" fill="#1b2540" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">    ├── stories.md · plan.md</text>
+<text x="1310" y="952" font-size="12.8" fill="#1b2540" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">    ├── sNN-*/output.md</text>
+<text x="1310" y="971" font-size="12.8" fill="#1b2540" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">    ├── execution.log</text>
+<text x="1310" y="990" font-size="12.8" fill="#1b2540" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">    └── stats.md</text>
+<rect x="1638" y="822" width="246" height="42" rx="10" fill="#e3f6f5" stroke="#a9dcd8" stroke-width="1.2" />
+<text x="1650" y="840" font-size="13" fill="#0e8a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stats.md</text>
+<text x="1650" y="856" font-size="11.3" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">tokens · time · status · tasks</text>
+<rect x="1638" y="868" width="246" height="42" rx="10" fill="#e3f6f5" stroke="#a9dcd8" stroke-width="1.2" />
+<text x="1650" y="886" font-size="13" fill="#0e8a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">output.md</text>
+<text x="1650" y="902" font-size="11.3" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">results · worker reports</text>
+<rect x="1638" y="914" width="246" height="42" rx="10" fill="#e3f6f5" stroke="#a9dcd8" stroke-width="1.2" />
+<text x="1650" y="932" font-size="13" fill="#0e8a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">execution.log</text>
+<text x="1650" y="948" font-size="11.3" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">decisions · lineage</text>
+<rect x="1638" y="960" width="246" height="42" rx="10" fill="#e3f6f5" stroke="#a9dcd8" stroke-width="1.2" />
+<text x="1650" y="978" font-size="13" fill="#0e8a8a" font-weight="750" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.agentic/</text>
+<text x="1650" y="994" font-size="11.3" fill="#5a6683" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">run data · always git-ignored</text>
+<path d="M1690 684 V708" fill="none" stroke="#0e8a8a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah-0e8a8a)"/>
+<rect x="1611.92" y="685" width="156.16" height="26" rx="13" fill="#ffffff" stroke="#0e8a8a" stroke-width="1.5" />
+<text x="1690" y="702.5" font-size="11" fill="#0e8a8a" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" letter-spacing="1">WRITE CHECKPOINT</text>
+<g transform="translate(24 1049) scale(0.85)"><path d="M16 6 a7.5 7.5 0 1 0 1.5 6" fill="none" stroke="#1f3a8a" stroke-width="2.2"/><path d="M12 5 h5 v-5" fill="none" stroke="#1f3a8a" stroke-width="2.2"/></g>
+<text x="48" y="1064" font-size="14" fill="#1b2540" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Open Source</text>
+<text x="132.7" y="1064" font-size="14" fill="#cdd8ee" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">|</text>
+<g transform="translate(158.7 1049) scale(0.85)"><circle cx="6" cy="6" r="3.5" fill="#1f3a8a"/><circle cx="14" cy="6" r="3.5" fill="#1f3a8a"/><path d="M0 18 c0 -6 12 -6 12 0 M8 18 c0 -6 12 -6 12 0" fill="#1f3a8a"/></g>
+<text x="182.7" y="1064" font-size="14" fill="#1b2540" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Model Agnostic — Claude Code · Codex · OpenCode</text>
+<text x="544.6" y="1064" font-size="14" fill="#cdd8ee" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">|</text>
+<g transform="translate(570.6 1049) scale(0.85)"><rect x="2" y="8" width="16" height="12" rx="2.5" fill="none" stroke="#1f3a8a" stroke-width="2"/><path d="M6 8 v-3 a4 4 0 0 1 8 0 v3" fill="none" stroke="#1f3a8a" stroke-width="2"/></g>
+<text x="594.6" y="1064" font-size="14" fill="#1b2540" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Deterministic by Design</text>
+<text x="771.7" y="1064" font-size="14" fill="#cdd8ee" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">|</text>
+<g transform="translate(797.7 1049) scale(0.85)"><path d="M6 4 l-5 6 l5 6 M14 4 l5 6 l-5 6" fill="none" stroke="#1f3a8a" stroke-width="2.2" stroke-linecap="round"/></g>
+<text x="821.7" y="1064" font-size="14" fill="#1b2540" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Built for Developers</text>
+<g transform="translate(1515 1046) scale(.32)"><path d="M22 32 C22 12 114 12 114 32 C114 44 98 50 68 50 C36 50 22 44 22 32 Z" fill="url(#gold)"/><path d="M114 28 C130 26 146 14 154 2 C150 20 138 34 116 40" fill="url(#gold)"/><ellipse cx="68" cy="15" rx="26" ry="7" fill="url(#gold)"/></g>
+<text x="1898" y="1064" font-size="20" fill="#13235a" font-weight="400" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-style="italic">Restore Time. Build What Matters.</text>
+</svg>
