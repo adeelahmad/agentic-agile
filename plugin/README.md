@@ -53,7 +53,7 @@ A copy on PATH or in `~/.local/bin` is used instead of building a second one.
 Every execution-worker attempt is time-boxed on **tokens and wall clock**, each with a
 soft limit (the worker is warned inside its tool results) and a hard limit (the worker
 is stopped, and its task is split by the planner mid-sprint instead of retried).
-Defaults are tight: **40k / 60k tokens, 10 / 15 min**. At the hard limit the hook
+Defaults: **150k / 250k tokens, 20 / 30 min** (real TDD attempts use 60–190k). At the hard limit the hook
 itself stops the worker (PostToolUse `continue: false`) — no model decides the kill.
 
 ## Init, layout, stats and the handoff

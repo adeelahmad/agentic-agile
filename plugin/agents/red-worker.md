@@ -15,7 +15,7 @@ absent before anyone builds it.
   fails by assertion (not by a missing symbol / compile error).
 
 ## Time box — tokens + wall clock (enforced by hooks)
-Every attempt runs under a tight per-task budget (defaults 40k/60k tokens, 10/15 min;
+Every attempt runs under a per-task budget (defaults 150k/250k tokens, 20/30 min;
 your init block's `### Budget` line has the exact numbers). Plan for it:
 - Read only what the task needs; don't re-read files; no exploration beyond scope.
 - A SOFT-limit notice appears in your tool results: finish the smallest complete step,

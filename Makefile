@@ -78,8 +78,9 @@ pycheck: ## Byte-compile the Python hook scripts
 	  && rm -rf plugin/bin/__pycache__ && echo "python ok"
 
 .PHONY: test-hosts
-test-hosts: ## Codex hooks emulation + OpenCode plugin end-to-end (no network, no tokens)
+test-hosts: ## Budget/worktree regression + Codex hooks emulation + OpenCode plugin end-to-end (no network, no tokens)
 	@command -v node >/dev/null && node --check plugin/hosts/opencode/agentic-agile.js
+	python3 scripts/test/budget-worktree.test.py
 	python3 scripts/test/codex-hooks.test.py
 	@command -v node >/dev/null && node scripts/test/opencode-plugin.test.mjs || { echo "node not found — skipped OpenCode test (CI runs it)"; }
 

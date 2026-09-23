@@ -20,6 +20,30 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.10.1] - 2026-09-23
+
+### Fixed
+- **Time-box defaults were far too tight.** 40k/60k tokens killed real RED/GREEN
+  attempts (reading the style guide + running fmt/vet/lint/build/test uses 60–190k
+  even when the attempt succeeds) before they wrote a line. Defaults are now
+  **150k / 250k tokens, 20 / 30 min**.
+- **The per-task budget override was never found** when a worker addressed its worktree
+  with `git -C <wt>` or absolute paths instead of `cd`: the hook located the worktree
+  from the tool call's cwd (the main repo), so it never read the worktree's
+  `.agentic/task.env` and applied the default for the whole attempt. The hook now finds
+  the worktree from a recorded binding, the paths a tool call names (`-C`, `cd`,
+  `--work-tree`, absolute paths, file paths, patch headers), the cwd, or — for a first
+  call that only reads main-tree files — the one unclaimed worktree whose `task.env`
+  names this role. When the worktree becomes known later, the budget is re-resolved
+  without resetting the attempt's clock, and a hard verdict reached under the wrong
+  budget is withdrawn.
+
+### Added
+- `budget status` shows each attempt's budget source (tasks.md line, task.env,
+  defaults.md, built-in) and how its worktree was found; `budget resolve --worktree WT`
+  prints the source too; soft/hard messages name the budget's source.
+- Regression test `scripts/test/budget-worktree.test.py` (in `make test-hosts` / CI).
+
 ## [0.10.0] - 2026-09-23
 
 ### Added

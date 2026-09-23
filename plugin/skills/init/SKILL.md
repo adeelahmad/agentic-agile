@@ -29,8 +29,8 @@ It prints a table of the proposed settings (the current ones if
 ask — one question per topic, the default first (Claude Code: `AskUserQuestion`; OpenCode: the
 `question` tool; Codex: ask in chat and wait):
 
-1. **Limits** — per worker attempt: tokens soft/hard (default 40k / 60k), minutes
-   soft/hard (10 / 15), re-plan cap (2). Keep the defaults, or which values?
+1. **Limits** — per worker attempt: tokens soft/hard (default 150k / 250k), minutes
+   soft/hard (20 / 30), re-plan cap (2). Keep the defaults, or which values?
 2. **Models** — planning agents `claude-opus-5-5`, workers `sonnet` (the orchestrator
    runs on `sonnet`). Keep, or which?
 3. **`.gitignore`** — may I add `.agentic/` and `.transcripts/` (run data: transcripts,
