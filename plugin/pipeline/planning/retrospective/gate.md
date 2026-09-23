@@ -14,6 +14,6 @@ Failure verb:
 Enforced by: the supervisor + the human at the planning retrospective; memory.md is
 validated structurally by md-db (schemas/memory.kdl).
 
-Self-check (v0.2): the worker runs `bin/selfcheck` (this same gate) BEFORE reporting
+Self-check (v0.2): the worker runs `selfcheck` (this same gate) BEFORE reporting
 done — nothing advances past a failing self-check. The SubagentStop hook runs the same
 gate as the backstop.

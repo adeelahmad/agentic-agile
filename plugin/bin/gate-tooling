@@ -16,16 +16,28 @@ GATE_NAME=tooling
 
 [ "${SKIP_HOOKS:-}" = "1" ] && exit 0
 
-missing=""
-command -v md-db       >/dev/null 2>&1 || missing="$missing md-db"
-command -v ctx-symbols >/dev/null 2>&1 || missing="$missing ctx-symbols"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve the REAL binaries (bin/md-db + bin/ctx-symbols are PATH shims that always exist).
+check() {
+  missing=""
+  "$HERE/ensure-tools" --resolve md-db       >/dev/null 2>&1 || missing="$missing md-db"
+  "$HERE/ensure-tools" --resolve ctx-symbols >/dev/null 2>&1 || missing="$missing ctx-symbols"
+}
+check
+
+# Self-heal before blocking: wait out a SessionStart background build, else build now.
+if [ -n "$missing" ] && [ "${AGENTIC_NO_AUTOINSTALL:-}" != "1" ]; then
+  echo "[$GATE_NAME] missing:$missing — installing via ensure-tools (one-time)..." >&2
+  "$HERE/ensure-tools" --sync >&2 || true
+  check
+fi
 
 if [ -n "$missing" ]; then
   echo "BLOCK[$GATE_NAME]: execution backends not on PATH:$missing" >&2
   echo "  Without them the RED/SCAFFOLD/GREEN gates degrade to grep (weaker structural" >&2
   echo "  checks, name-only duplicate detection) — execution must not start that way." >&2
-  echo "  Install:  make install   (builds md-db + ctx-symbols into ~/.local/bin)" >&2
-  echo "  Then ensure that dir is on PATH (e.g. export PATH=\"\$HOME/.local/bin:\$PATH\")." >&2
+  echo "  Auto-install failed (see ensure-tools log: \$CLAUDE_PLUGIN_DATA/install.log — usually no cargo)." >&2
+  echo "  Install Rust (https://rustup.rs) and re-run, or: make install   (builds into ~/.local/bin)." >&2
   echo "  (Planning-only work, or knowingly accepting weakened gates? SKIP_HOOKS=1.)" >&2
   exit 2
 fi

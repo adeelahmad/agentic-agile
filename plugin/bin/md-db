@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# md-db — PATH shim (this plugin's bin/ is on PATH in every session). Execs the real
+# md-db that bin/ensure-tools installed (or one you installed yourself); if none exists
+# yet it waits for / runs the one-time build. Never recurses into itself.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+real="$("$HERE/ensure-tools" --resolve md-db)" || {
+  echo "md-db: not installed yet — building bundled tools (one-time, needs cargo)..." >&2
+  "$HERE/ensure-tools" --sync >&2
+  real="$("$HERE/ensure-tools" --resolve md-db)" || {
+    echo "md-db: unavailable — install Rust (https://rustup.rs) then run: ensure-tools --sync" >&2
+    exit 127
+  }
+}
+exec "$real" "$@"

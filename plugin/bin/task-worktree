@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# task-worktree — per-task git worktree for hosts WITHOUT built-in sub-agent isolation
+# (Codex, OpenCode). Claude Code uses the Agent tool's isolation: "worktree" instead.
+#
+#   task-worktree add <TASK_ID> [BASE_REF]   create (or reuse) the task's worktree; prints its path
+#   task-worktree path <TASK_ID>             print the path (exit 1 if it doesn't exist)
+#   task-worktree remove <TASK_ID>           remove it (after merge, or to abandon)
+#
+# Worktrees live at <project>/.agentic/worktrees/<TASK_ID> on branch agentic/<TASK_ID> —
+# inside the git-ignored run-data dir, same fixed layout on every host (_paths.sh).
+# The worker binds to it with its first command:  agentic bind <path>
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+. "$HERE/_paths.sh"
+
+cmd="${1:-}"; task="${2:-}"
+case "$task" in ""|*/*|.*) [ "$cmd" = "-h" ] || [ "$cmd" = "--help" ] || { echo "task-worktree: need a TASK_ID like S1-02-T3" >&2; exit 64; } ;; esac
+wt="$AGENTIC_HOME/worktrees/$task"
+case "$cmd" in
+  add)
+    if [ -e "$wt/.git" ]; then echo "$wt"; exit 0; fi
+    mkdir -p "$AGENTIC_HOME/worktrees"
+    base="${3:-HEAD}"
+    if git -C "$AGENTIC_PROJECT" show-ref --verify --quiet "refs/heads/agentic/$task"; then
+      git -C "$AGENTIC_PROJECT" worktree add -q "$wt" "agentic/$task" >&2 || exit 1
+    else
+      git -C "$AGENTIC_PROJECT" worktree add -q -b "agentic/$task" "$wt" "$base" >&2 || exit 1
+    fi
+    printf '{"cwd":"%s"}' "$wt" | "$HERE/worktree-hygiene" >/dev/null 2>&1 || true
+    mkdir -p "$wt/.agentic"
+    echo "$wt" ;;
+  path) [ -e "$wt/.git" ] && echo "$wt" ;;
+  remove)
+    git -C "$AGENTIC_PROJECT" worktree remove --force "$wt" >&2 2>/dev/null || rm -rf "$wt"
+    git -C "$AGENTIC_PROJECT" worktree prune >/dev/null 2>&1 || true ;;
+  -h|--help|"") sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) echo "task-worktree: unknown command '$cmd'" >&2; exit 64 ;;
+esac

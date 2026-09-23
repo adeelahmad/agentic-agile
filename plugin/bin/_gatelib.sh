@@ -22,6 +22,27 @@
 
 set -uo pipefail
 
+# bin/ensure-tools resolves the REAL backend binaries (bin/md-db + bin/ctx-symbols are
+# PATH shims, so `command -v` alone would always succeed and hide a missing backend).
+GATELIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+have_tool() { "$GATELIB_DIR/ensure-tools" --resolve "$1" >/dev/null 2>&1; }
+export PATH="$GATELIB_DIR:$PATH"   # bare `md-db`/`ctx-symbols` -> shim -> real binary
+
+# shellcheck source=/dev/null
+. "$GATELIB_DIR/_paths.sh"
+
+# Every verdict is logged (pass AND block) to .agentic/logs/gates.jsonl — the sprint
+# stats count attempts/failures from here, not from anything a model wrote.
+_gate_log_verdict() {
+  local rc=$?
+  mkdir -p "$AGENTIC_LOGS" 2>/dev/null || return 0
+  printf '{"ts":"%s","gate":"%s","role":"%s","task":"%s","attempt":"%s","story_dir":"%s","exit":%d,"selfcheck":%s}\n' \
+    "$(date -u +%FT%TZ)" "${GATE_NAME:-?}" "${AGENT_ROLE:-}" "${TASK_ID:-}" "${ATTEMPT:-}" "${STORY_DIR:-}" \
+    "$rc" "$([ "${AGENTIC_SELFCHECK:-}" = 1 ] && echo true || echo false)" >> "$AGENTIC_LOGS/gates.jsonl" 2>/dev/null
+  return "$rc"
+}
+trap _gate_log_verdict EXIT
+
 warn() { echo "WARN[$GATE_NAME]: $*" >&2; }
 fail() { echo "BLOCK[$GATE_NAME]: $*" >&2; exit 2; }
 note() { echo "[$GATE_NAME] $*" >&2; }
@@ -31,6 +52,25 @@ repo_dir() {
   if [ -n "${REPO_DIR:-}" ]; then echo "$REPO_DIR"; return; fi
   git rev-parse --show-toplevel 2>/dev/null || pwd
 }
+
+# Hosts without built-in sub-agent isolation (Codex, OpenCode) run the SubagentStop gate
+# in the session's cwd — the MAIN tree. A worker there bound its worktree with
+# `agentic bind` (host-adapter recorded it under .agentic/state/agents/<agent_id>.json),
+# so the gate moves into that worktree before checking anything. Reads the hook payload
+# from stdin with a bounded wait (a self-check has no payload and just proceeds).
+_gate_enter_bound_worktree() {
+  [ -z "${REPO_DIR:-}" ] || return 0
+  [ -t 0 ] && return 0
+  local payload="" aid reg wt
+  IFS= read -r -d '' -t 2 payload || true
+  aid="$(printf '%s' "$payload" | sed -nE 's/.*"agent_id"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -1)"
+  [ -n "$aid" ] || return 0
+  reg="$AGENTIC_STATE/agents/$(printf '%s' "$aid" | tr -c 'A-Za-z0-9_.-' '_').json"
+  [ -f "$reg" ] || return 0
+  wt="$(sed -nE 's/.*"worktree"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "$reg" | head -1)"
+  if [ -n "$wt" ] && [ -d "$wt" ]; then export REPO_DIR="$wt"; cd "$wt" || return 0; fi
+}
+_gate_enter_bound_worktree
 
 # Per-worktree task contract the supervisor writes at dispatch (.agentic/task.env):
 # TASK_ID, ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF, STORY_DIR,
@@ -42,6 +82,22 @@ load_task_env() {
   set -a; . "$te"; set +a
 }
 load_task_env
+
+# Budget overrun release (bin/budget). A worker that hit its HARD time/token limit is
+# being stopped — its SubagentStop gate must not block the stop (exit 2 would make it keep
+# working past the limit). It is released WITHOUT verification: the attempt is NOT a pass,
+# the supervisor never merges it, and the task goes to a mid-sprint re-plan. (A worker
+# forging the marker gains nothing: the only outcome is its task being re-planned.)
+budget_release() {
+  local m; m="$(repo_dir)/.agentic/budget-exceeded"
+  [ -f "$m" ] || return 0
+  case "${AGENT_ROLE:-}" in red-worker|scaffolder|green-worker) ;; *) return 0 ;; esac
+  grep -q "role=${AGENT_ROLE} attempt=${ATTEMPT:-}" "$m" 2>/dev/null || return 0
+  echo "[${GATE_NAME:-gate}] BUDGET-EXCEEDED — stop released, NOT verified: $(head -1 "$m")" >&2
+  echo "  This attempt is not a pass. Supervisor: do not merge; TaskStop/mark-killed, re-plan." >&2
+  exit 0
+}
+budget_release
 
 # Story-bound, append-only inter-agent comms (init.md <-> output.md) — THE channel,
 # not a throwaway. Per story: the supervisor APPENDS one block to init.md per dispatch
@@ -96,7 +152,7 @@ latest_block() {
 }
 
 # True if ctx-symbols is available.
-have_ctx_symbols() { command -v ctx-symbols >/dev/null 2>&1; }
+have_ctx_symbols() { have_tool ctx-symbols; }
 
 # Count definitions of a symbol; echoes an integer. Uses ctx-symbols, else grep.
 symbol_count() {

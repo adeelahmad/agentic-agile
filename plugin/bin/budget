@@ -1,0 +1,474 @@
+#!/usr/bin/env python3
+"""budget — per-task TIME + TOKEN time-boxing for execution workers.
+
+Every worker attempt (red-worker / scaffolder / green-worker) runs under two budgets,
+each with a SOFT and a HARD limit:
+
+    tokens   soft 40k   hard 60k     (context in use + all output tokens, see below)
+    time     soft 10m   hard 15m     (wall clock since the attempt's first tool call)
+
+  SOFT crossed  -> the worker is told, inside its own tool results (PostToolUse
+                   additionalContext): how much is left, finish or wrap up gracefully.
+  HARD crossed  -> the worker's tool calls are denied (PreToolUse) except appending its
+                   report to output.md, a `.agentic/budget-exceeded` marker lets its
+                   SubagentStop gate release it, and `budget watch` tells the supervisor
+                   to TaskStop it. The task is NOT retried — it goes back to the planner
+                   to be split (SKILL.md "Budget overrun -> mid-sprint re-plan").
+
+Resolution order (first set wins):  per-task `budget:` line in tasks.md  >
+    BUDGET_* in the worktree's .agentic/task.env  >  docs/agents/defaults.md  >  built-ins.
+
+Usage:
+  budget resolve [--tasks FILE --task Tn]   print the resolved BUDGET_* lines (for task.env)
+  budget hook pre|post|stop                 hook mode (reads the hook JSON on stdin)
+  budget watch [--interval S] [--grace S]   supervisor: block until a worker must be
+                                            killed or none is running; prints KILL lines
+  budget mark-killed AGENT_ID...            after TaskStop: stop tracking those attempts
+  budget status                             table of tracked attempts
+  budget replans TASK_ID                    how many times TASK_ID was split (cap check)
+
+Tokens = the latest assistant turn's context (input + cache read + cache creation)
+plus every output token so far, read from the sub-agent's own transcript.
+
+Hook mode NEVER fails the tool call on an internal error (exit 0, no output).
+"""
+import glob
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import _paths  # noqa: E402  (the one file-layout definition)
+import _usage  # noqa: E402  (token usage from any host's session log)
+
+BUDGET_KEYS = ("TOKENS_SOFT", "TOKENS_HARD", "TIME_SOFT_MIN", "TIME_HARD_MIN", "MAX_REPLANS")
+WORKERS = ("red-worker", "scaffolder", "green-worker")
+GRACE_DENIALS = 3          # at the hard limit: denied non-report calls before the forced stop
+TASK_BUDGET = re.compile(r"^\s*budget:\s*(.+)$", re.I)
+
+
+# ── helpers ───────────────────────────────────────────────────────────
+def sh(*args, cwd=None):
+    try:
+        return subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=10).stdout.strip()
+    except Exception:
+        return ""
+
+
+def main_tree(cwd):
+    return _paths.project(cwd)
+
+
+def state_dir(cwd):
+    return _paths.home(cwd, "budget")
+
+
+def read_kv(path):
+    kv = {}
+    try:
+        with open(path) as f:
+            for line in f:
+                m = re.match(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*['\"]?([^'\"\n]*)['\"]?\s*$", line)
+                if m:
+                    kv[m.group(1)] = m.group(2)
+    except OSError:
+        pass
+    return kv
+
+
+def conf_values(cwd):
+    """docs/agents/defaults.md (written by agentic-init) — parsed, never executed."""
+    st = _paths.settings(cwd)
+    return {k: st[k] for k in BUDGET_KEYS}
+
+
+def task_override(tasks_file, task):
+    """`budget: tokens_hard=80000 time_hard=20m` under `## <task> — ...` in tasks.md."""
+    vals = {}
+    if not (tasks_file and task and os.path.isfile(tasks_file)):
+        return vals
+    inside = False
+    with open(tasks_file) as f:
+        for line in f:
+            if line.startswith("## "):
+                inside = re.match(r"^##\s+" + re.escape(task) + r"\b", line) is not None
+                continue
+            m = TASK_BUDGET.match(line) if inside else None
+            if m:
+                for k, v in re.findall(r"(tokens_soft|tokens_hard|time_soft|time_hard)\s*=\s*(\d+)", m.group(1)):
+                    key = k.upper() + ("_MIN" if k.startswith("time") else "")
+                    vals[key] = int(v)
+    return vals
+
+
+def resolve(cwd, tasks_file=None, task=None, task_env=None):
+    b = conf_values(cwd)
+    for k in BUDGET_KEYS:
+        v = (task_env or {}).get("BUDGET_" + k)
+        if v and v.isdigit():
+            b[k] = int(v)
+    b.update(task_override(tasks_file, task))
+    # a soft limit above its hard limit is a config slip: clamp, never widen
+    b["TOKENS_SOFT"] = min(b["TOKENS_SOFT"], b["TOKENS_HARD"])
+    b["TIME_SOFT_MIN"] = min(b["TIME_SOFT_MIN"], b["TIME_HARD_MIN"])
+    return b
+
+
+def transcript_for(payload, agent_id):
+    """The sub-agent's own session log — Claude transcript or Codex rollout (_usage)."""
+    return _usage.agent_transcript(payload, agent_id)
+
+
+def tokens_used(path):
+    """latest context size + cumulative output tokens (any host; see _usage)."""
+    return _usage.context_plus_output(path)
+
+
+def bound_worktree(cwd, agent_id):
+    """Codex/OpenCode workers bind their worktree with `agentic bind` (host-adapter)."""
+    st = load_state(os.path.join(_paths.home(cwd, "state/agents"), "%s.json" % safe(agent_id)))
+    wt = (st or {}).get("worktree") or ""
+    return wt if wt and os.path.isdir(wt) else ""
+
+
+def safe(s):
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", s or "")
+
+
+def fmt_k(n):
+    return "%.1fk" % (n / 1000.0) if n is not None else "?"
+
+
+def load_state(path):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def save_state(path, st):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(st, f)
+    os.replace(tmp, path)
+
+
+# ── hook mode ─────────────────────────────────────────────────────────
+def emit(event, context=None, deny=None, stop=None):
+    out = {"hookSpecificOutput": {"hookEventName": event}}
+    if stop:                       # PostToolUse `continue: false` ends the sub-agent (verified)
+        out["continue"] = False
+        out["stopReason"] = stop
+    if context:
+        out["hookSpecificOutput"]["additionalContext"] = context
+    if deny:
+        out["hookSpecificOutput"]["permissionDecision"] = "deny"
+        out["hookSpecificOutput"]["permissionDecisionReason"] = deny
+    print(json.dumps(out))
+
+
+def is_report_write(payload, st):
+    """At the hard limit the ONLY allowed tool call is appending the report to output.md."""
+    ti = payload.get("tool_input") or {}
+    fp = ti.get("file_path") or ""
+    if payload.get("tool_name") in ("Write", "Edit", "MultiEdit") and fp.endswith("output.md"):
+        return True
+    fp = fp or ti.get("filePath") or ""
+    if payload.get("tool_name") in ("write", "edit") and fp.endswith("output.md"):
+        return True                                            # OpenCode
+    cmd = ti.get("command") if isinstance(ti.get("command"), str) else ""
+    if payload.get("tool_name") == "apply_patch":              # Codex: the patch may touch ONLY output.md
+        files = re.findall(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$", cmd, re.M)
+        return bool(files) and all(f.strip().endswith("output.md") for f in files)
+    return payload.get("tool_name") in ("Bash", "bash") and "output.md" in cmd and re.search(r">>|tee -a", cmd) is not None
+
+
+def hook(mode):
+    if os.environ.get("SKIP_HOOKS") == "1" or os.environ.get("AGENTIC_NO_BUDGET") == "1":
+        return
+    raw = sys.stdin.read()
+    if not any(w in raw for w in WORKERS):          # cheap exit for every non-worker call
+        return
+    payload = json.loads(raw)
+    agent_id, agent_type = payload.get("agent_id") or "", payload.get("agent_type") or ""
+    role = next((w for w in WORKERS if agent_type == w or agent_type.endswith(":" + w)), None)
+    if not agent_id or not role:
+        return
+    cwd = payload.get("cwd") or os.getcwd()
+    top = bound_worktree(cwd, agent_id) or sh("git", "-C", cwd, "rev-parse", "--show-toplevel") or cwd
+    spath = os.path.join(state_dir(cwd), "%s.json" % safe(agent_id))
+    st = load_state(spath)
+    now = time.time()
+    if st is not None and not st.get("task") and top != st.get("worktree"):
+        st = None                  # bound to its worktree after the first call: re-read task.env
+
+    if mode == "stop":
+        if st:
+            st["done"] = now
+            save_state(spath, st)
+        return
+
+    if st is None:
+        env = read_kv(os.path.join(top, ".agentic", "task.env"))
+        task = env.get("TASK_ID", "")
+        tasks_file = os.path.join(env["STORY_DIR"], "tasks.md") if env.get("STORY_DIR") else None
+        short_task = task.split()[-1] if task else ""
+        b = resolve(cwd, tasks_file, re.sub(r"^.*[-_ ](T\d+)$", r"\1", short_task) or None, env)
+        st = {"agent_id": agent_id, "role": role, "task": task, "attempt": env.get("ATTEMPT", ""),
+              "worktree": top, "story_dir": env.get("STORY_DIR", ""), "start": now, "budget": b,
+              "soft_warned": False, "final_warned": False, "hard": False, "done": None}
+    if st.get("done") and not st.get("killed") and not st.get("hook_killed"):
+        st["done"] = None          # a SubagentStop gate blocked the stop: still working
+    b = st["budget"]
+    tp = transcript_for(payload, agent_id)
+    if tp:
+        st["transcript"] = tp
+    toks = tokens_used(st.get("transcript") or tp)
+    if toks is not None:
+        st["tokens"] = toks
+    toks = st.get("tokens")
+    mins = (now - st["start"]) / 60.0
+    st["elapsed_min"] = round(mins, 2)
+
+    t_hard = b["TOKENS_HARD"]
+    m_hard = b["TIME_HARD_MIN"]
+    over_hard = (toks is not None and toks >= t_hard) or mins >= m_hard
+    over_soft = (toks is not None and toks >= b["TOKENS_SOFT"]) or mins >= b["TIME_SOFT_MIN"]
+    near_hard = (toks is not None and toks >= 0.9 * t_hard) or mins >= 0.9 * m_hard
+    left = "%s of %s tokens used (%s left), %.1f of %d min used (%.1f min left)" % (
+        fmt_k(toks), fmt_k(t_hard), fmt_k(max(t_hard - toks, 0)) if toks is not None else "?",
+        mins, m_hard, max(m_hard - mins, 0))
+    report = os.path.join(st["story_dir"], "output.md") if st.get("story_dir") else "the story's output.md"
+
+    if over_hard and not st["hard"]:
+        st["hard"] = now
+        try:
+            os.makedirs(os.path.join(top, ".agentic"), exist_ok=True)
+            with open(os.path.join(top, ".agentic", "budget-exceeded"), "w") as f:
+                f.write("role=%s attempt=%s agent_id=%s at=%d %s\n" % (role, st["attempt"], agent_id, now, left))
+        except OSError:
+            pass
+    save_state(spath, st)
+
+    if st["hard"]:
+        msg = ("HARD BUDGET EXCEEDED (%s). You are being stopped. Do ONE thing: append your "
+               "`## <task> · attempt N · %s · <ts>` block to %s with `status: re-plan` (budget exceeded), a "
+               "### Summary of what is done and what is left, ### Result, ### Next — that tool call is "
+               "your last. Do not run tests or edit code. The task goes back to the planner to be split." % (left, role, report))
+        stop = ("agentic-agile: HARD BUDGET — %s %s stopped by the time-box hook (%s). "
+                "Not a pass; the supervisor re-plans this task." % (role, st.get("task") or "", left))
+        just_crossed = st["hard"] == now
+        if mode == "pre":
+            if is_report_write(payload, st):
+                return                                   # the one call we still allow
+            st["denials"] = st.get("denials", 0) + 1
+            save_state(spath, st)
+            if st["denials"] <= GRACE_DENIALS:
+                emit("PreToolUse", deny=msg + " (%d/%d refusals before a forced stop)" % (st["denials"], GRACE_DENIALS))
+            # past the grace: let this call through — its PostToolUse ends the agent
+            return
+        if mode == "post":
+            if just_crossed:                             # first sight: one chance to report
+                emit("PostToolUse", context=msg)
+                return
+            st["hook_killed"] = now
+            st["done"] = now
+            save_state(spath, st)
+            emit("PostToolUse", context=msg, stop=stop)  # deterministic stop, no model decision
+        return
+
+    if mode != "post":
+        return
+    if near_hard and not st["final_warned"]:
+        st["final_warned"] = True
+        save_state(spath, st)
+        emit("PostToolUse", context=(
+            "FINAL BUDGET WARNING: %s. At the hard limit you will be KILLED and this attempt "
+            "discarded. Wrap up NOW: finish the smallest complete step, run selfcheck once, "
+            "append your output.md report. If the task cannot fit, say so in ### Next "
+            "(status: re-plan) so the planner can split it." % left))
+    elif over_soft and not st["soft_warned"]:
+        st["soft_warned"] = True
+        save_state(spath, st)
+        emit("PostToolUse", context=(
+            "SOFT BUDGET LIMIT reached: %s. Complete this task within what is left or end it "
+            "gracefully — no exploration, no refactors, no re-reading files you already read. "
+            "If it will not fit, append your output.md report now with status: re-plan "
+            "and what remains, rather than being killed at the hard limit." % left))
+
+
+# ── supervisor commands ───────────────────────────────────────────────
+def all_states(cwd):
+    d = state_dir(cwd)
+    out = []
+    for p in sorted(glob.glob(os.path.join(d, "*.json"))):
+        st = load_state(p)
+        if st:
+            out.append((p, st))
+    return out
+
+
+def refresh(st):
+    """Re-measure an attempt from outside the hook (the watcher polls between tool calls).
+    True when the attempt is at/over a HARD limit."""
+    now = time.time()
+    st["elapsed_min"] = round((now - st["start"]) / 60.0, 2)
+    t = tokens_used(st.get("transcript"))
+    if t is not None:
+        st["tokens"] = t
+    b = st["budget"]
+    return bool(st.get("hard")) or st["elapsed_min"] >= b["TIME_HARD_MIN"] or (st.get("tokens") or 0) >= b["TOKENS_HARD"]
+
+
+def watch(cwd, interval, grace):
+    """The supervisor's sleep. Returns when a worker was STOPPED by the time-box hook, a
+    worker is past its HARD limit + grace and still running (the hook's backstop: TaskStop
+    it), or no worker is running. Run with run_in_background: its exit is the wake-up."""
+    while True:
+        now = time.time()
+        stopped, kill = [], []
+        states = all_states(cwd)
+        running = [(p, s) for p, s in states if not s.get("done")]
+        for p, s in states:
+            if s.get("hook_killed") and not s.get("reported"):
+                s["reported"] = now
+                save_state(p, s)
+                stopped.append(s)
+        for p, s in running:
+            if refresh(s):
+                if not s.get("hard"):
+                    s["hard"] = now
+                save_state(p, s)
+                if now - s["hard"] >= grace:
+                    kill.append(s)
+        line = "%s agent_id=%s task=%s role=%s attempt=%s tokens=%s/%s elapsed=%.1f/%dmin"
+        for tag, group in (("STOPPED", stopped), ("KILL", kill)):
+            for s in group:
+                print(line % (tag, s["agent_id"], s.get("task") or "?", s["role"], s.get("attempt") or "?",
+                              fmt_k(s.get("tokens")), fmt_k(s["budget"]["TOKENS_HARD"]), s.get("elapsed_min") or 0,
+                              s["budget"]["TIME_HARD_MIN"]))
+        if stopped or kill:
+            if kill:
+                print("-> KILL lines: the hook could not stop these — TaskStop each, then `budget mark-killed <agent_id>`.")
+            print("-> Budget overrun: discard these attempts (never merge), PAUSE the sprint and dispatch the "
+                  "planner in replan mode (SKILL.md 'Budget overrun'). Do NOT retry these tasks as-is.")
+            return 3
+        if not running:
+            print("IDLE: no worker running.")
+            return 0
+        time.sleep(interval)
+
+
+def mark_killed(cwd, agent_ids):
+    n = 0
+    for p, s in all_states(cwd):
+        if s["agent_id"] in agent_ids or "ALL" in agent_ids and not s.get("done"):
+            s["done"] = time.time()
+            s["killed"] = True
+            save_state(p, s)
+            n += 1
+    print("marked killed: %d" % n)
+    return 0
+
+
+def status(cwd):
+    rows = all_states(cwd)
+    if not rows:
+        print("no tracked worker attempts")
+        return 0
+    print("%-22s %-13s %-14s %-4s %-16s %-14s %s" % ("agent_id", "role", "task", "att", "tokens", "minutes", "state"))
+    for _, s in rows:
+        refresh(s)
+        b = s["budget"]
+        state = "killed" if s.get("killed") else "done" if s.get("done") else ("HARD" if s.get("hard") else ("soft" if s.get("soft_warned") else "ok"))
+        print("%-22s %-13s %-14s %-4s %-16s %-14s %s" % (
+            s["agent_id"][:22], s["role"], (s.get("task") or "?")[:14], s.get("attempt") or "?",
+            "%s/%s" % (fmt_k(s.get("tokens")), fmt_k(b["TOKENS_HARD"])),
+            "%.1f/%d" % (s["elapsed_min"], b["TIME_HARD_MIN"]), state))
+    return 0
+
+
+def split_parent(root, story, tn):
+    """`split_from: T3` under `## T5 — ...` in the story's tasks.md -> "T3"."""
+    for tf in glob.glob(os.path.join(root, "docs", "agents", "sprint*", story.lower() + "-*", "tasks.md")):
+        inside = False
+        with open(tf) as f:
+            for line in f:
+                if line.startswith("## "):
+                    inside = re.match(r"^##\s+" + re.escape(tn) + r"\b", line) is not None
+                    continue
+                m = re.match(r"^\s*split_from:\s*(T\d+)", line) if inside else None
+                if m:
+                    return m.group(1)
+    return None
+
+
+def replans(cwd, task):
+    """How many times TASK_ID's lineage was split: `wave-K replan SN-NN start Tn` lines in
+    execution.log for the task AND every ancestor it was split from (`split_from:`)."""
+    m = re.match(r"^(S\d+-\d+)(?:[-_ ]+(T\d+))?", task or "")
+    if not m:
+        print("budget replans: TASK_ID must look like S1-02-T3", file=sys.stderr)
+        return 64
+    root = main_tree(cwd)
+    story, tn = m.group(1), m.group(2)
+    lineage, cur = [], tn
+    while cur and cur not in lineage and len(lineage) < 20:
+        lineage.append(cur)
+        cur = split_parent(root, story, cur)
+    n = 0
+    for log in glob.glob(os.path.join(root, "docs", "agents", "sprint*", "execution.log")):
+        with open(log) as f:
+            for line in f:
+                w = line.split()
+                if " replan " in line and story in w and "start" in w and (not tn or any(t in w for t in lineage)):
+                    n += 1
+    cap = resolve(cwd)["MAX_REPLANS"]
+    print("replans=%d cap=%d lineage=%s%s" % (n, cap, "<-".join(lineage) or story,
+          "  -> CAP REACHED: escalate (hard stop), do not split again" if n >= cap else ""))
+    return 3 if n >= cap else 0
+
+
+def main(argv):
+    cwd = os.getcwd()
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return 0
+    cmd = argv[0]
+    opts = {}
+    it = iter(argv[1:])
+    for a in it:
+        if a.startswith("--"):
+            opts[a[2:]] = next(it, "")
+        else:
+            opts.setdefault("_", []).append(a)
+    if cmd == "hook":
+        try:
+            hook((opts.get("_") or ["post"])[0])
+        except Exception:
+            pass                                   # never break a tool call
+        return 0
+    if cmd == "resolve":
+        env = read_kv(os.path.join(sh("git", "rev-parse", "--show-toplevel") or cwd, ".agentic", "task.env"))
+        b = resolve(cwd, opts.get("tasks"), opts.get("task"), env)
+        for k in ("TOKENS_SOFT", "TOKENS_HARD", "TIME_SOFT_MIN", "TIME_HARD_MIN"):
+            print("BUDGET_%s=%d" % (k, b[k]))
+        return 0
+    if cmd == "watch":
+        return watch(cwd, int(opts.get("interval") or 20), int(opts.get("grace") or 60))
+    if cmd == "status":
+        return status(cwd)
+    if cmd == "mark-killed":
+        return mark_killed(cwd, opts.get("_") or [])
+    if cmd == "replans":
+        return replans(cwd, (opts.get("_") or [""])[0])
+    print("budget: unknown command %r (see budget --help)" % cmd, file=sys.stderr)
+    return 64
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

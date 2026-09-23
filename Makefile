@@ -65,16 +65,30 @@ clippy: ## Clippy with warnings-as-errors
 .PHONY: shellcheck
 shellcheck: ## Lint gate scripts (skipped with a warning if shellcheck is absent)
 	@command -v shellcheck >/dev/null \
-	  && shellcheck -S error -e SC1091 plugin/bin/_gatelib.sh plugin/bin/gate-* plugin/bin/log-execution \
+	  && shellcheck -S error -e SC1091 plugin/bin/_gatelib.sh $$(grep -l "^#!/usr/bin/env bash" plugin/bin/gate-*) plugin/bin/log-execution \
 	       plugin/bin/selfcheck plugin/bin/transcripts plugin/bin/worktree-create plugin/bin/worktree-remove \
+	       plugin/bin/worktree-hygiene plugin/bin/ensure-tools plugin/bin/md-db plugin/bin/ctx-symbols \
+	       plugin/bin/session-start plugin/bin/_paths.sh plugin/bin/agentic plugin/bin/bind plugin/bin/task-worktree \
 	  || echo "WARN: shellcheck not installed; skipping (CI enforces it)"
+
+.PHONY: pycheck
+pycheck: ## Byte-compile the Python hook scripts
+	@python3 -m py_compile plugin/bin/budget plugin/bin/stats plugin/bin/agentic-init plugin/bin/gate-commit-author plugin/bin/_paths.py \
+	    plugin/bin/_usage.py plugin/bin/host-adapter plugin/bin/install \
+	  && rm -rf plugin/bin/__pycache__ && echo "python ok"
+
+.PHONY: test-hosts
+test-hosts: ## Codex hooks emulation + OpenCode plugin end-to-end (no network, no tokens)
+	@command -v node >/dev/null && node --check plugin/hosts/opencode/agentic-agile.js
+	python3 scripts/test/codex-hooks.test.py
+	@command -v node >/dev/null && node scripts/test/opencode-plugin.test.mjs || { echo "node not found — skipped OpenCode test (CI runs it)"; }
 
 .PHONY: json
 json: ## Validate plugin.json + marketplace.json
 	@python3 -c "import json;json.load(open('plugin/.claude-plugin/plugin.json'));json.load(open('.claude-plugin/marketplace.json'));print('JSON ok')"
 
 .PHONY: lint
-lint: clippy shellcheck json ## Run all linters
+lint: clippy shellcheck pycheck json ## Run all linters
 
 .PHONY: test
 test: ## Run ctx-symbols + md-db unit tests
@@ -87,7 +101,7 @@ validate: json ## claude plugin validate --strict
 	claude plugin validate ./plugin --strict
 
 .PHONY: ci
-ci: fmt-check lint test eval-validate ## Run everything CI runs (except the live claude install)
+ci: fmt-check lint test eval-validate test-hosts ## Run everything CI runs (except the live claude install)
 
 # ── Evals ──────────────────────────────────────────────────────────
 .PHONY: eval-validate

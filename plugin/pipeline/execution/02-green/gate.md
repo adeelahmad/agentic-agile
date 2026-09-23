@@ -16,6 +16,6 @@ Standards binding (added): the fmt/lint/test/coverage matrix this gate runs is t
 one declared in standards.md (the lawkeeper's digest), not a hardcoded list — so the
 rules that governed planning also bind execution.
 
-Self-check (v0.2): the worker runs `bin/selfcheck` (this same gate) BEFORE reporting
+Self-check (v0.2): the worker runs `selfcheck` (this same gate) BEFORE reporting
 done. A PASS there means this hook will pass — the hook is the backstop, not the first
 line of defense.

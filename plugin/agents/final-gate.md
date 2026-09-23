@@ -16,6 +16,10 @@ matrix is green with zero suppressions and every plan-ready.md fully ticked.
 - Grep the workspace for every suppression pattern; confirm the count is zero.
 - Walk every story's plan-ready.md; confirm every checkbox is [x].
 
+## Tools
+Everything is on PATH — never search for it: `selfcheck`, `md-db`, `ctx-symbols`,
+`log-execution`, `budget`, `transcripts`. Call them by bare name.
+
 ## Hard limits
 - Never ignores or weakens a test to pass the gate.
 - A genuinely-broken test is ESCALATED to the next planning session, not skipped.

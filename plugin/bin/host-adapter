@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""host-adapter — the pieces Claude Code gives natively that Codex / OpenCode don't.
+
+  host-adapter hook     SubagentStart · SubagentStop · PreToolUse (reads the hook JSON)
+
+SubagentStart / SubagentStop (every host): register the sub-agent in
+  .agentic/state/agents/<agent_id>.json (type, session, its own transcript) so the
+  token ledger and the gates can find it on hosts without Claude's subagents/ dir.
+
+PreToolUse (Codex, OpenCode — Claude Code isolates workers itself): worktree isolation.
+  - A worker's first command must be `agentic bind <worktree>`; the hook records the
+    binding (it sees the agent id). Before that, a writing worker's tool calls are denied.
+  - After it, every Bash command must run inside the worktree (`cd <worktree> && …`) and
+    every patched/written path must be under it — otherwise the call is denied with the
+    exact fix. (The OpenCode plugin rewrites args instead of denying: it calls this with
+    AGENTIC_HOST=opencode and reads the binding back.)
+
+Deterministic, never fails a tool call on an internal error.
+"""
+import json
+import os
+import re
+import shlex
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import _paths  # noqa: E402
+import _usage  # noqa: E402
+
+WRITERS = ("red-worker", "scaffolder", "green-worker")
+BIND = re.compile(r"(?:^|[;&|]\s*|\s)(?:\S*/)?(?:agentic\s+bind|bin/bind)\s+(\S+)")
+PATCH_PATHS = re.compile(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$|^\*\*\* Move to: (.+)$", re.M)
+
+
+def role_of(agent_type):
+    return (agent_type or "").split(":")[-1]
+
+
+def reg_path(cwd, agent_id):
+    return os.path.join(_paths.home(cwd, "state/agents"), "%s.json" % re.sub(r"[^A-Za-z0-9_.-]", "_", agent_id))
+
+
+def load(p):
+    try:
+        with open(p) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def save(p, d):
+    tmp = p + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(d, f)
+    os.replace(tmp, p)
+
+
+def deny(msg):
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                             "permissionDecisionReason": "agentic-agile isolation: " + msg}}))
+
+
+def under(path, root):
+    p = os.path.realpath(path)
+    r = os.path.realpath(root)
+    return p == r or p.startswith(r + os.sep)
+
+
+def pre_tool(payload, cwd, agent_id, role, host):
+    tool = payload.get("tool_name") or ""
+    ti = payload.get("tool_input") or {}
+    p = reg_path(cwd, agent_id)
+    reg = load(p) or {"agent_id": agent_id, "agent_type": role, "session_id": payload.get("session_id"), "host": host}
+    wt = reg.get("worktree") or ""
+    cmd = ti.get("command") if isinstance(ti.get("command"), str) else ""
+
+    if tool in ("Bash", "bash", "shell") and cmd:
+        m = BIND.search(cmd)
+        if m:
+            target = m.group(1).strip("'\"")
+            if os.path.isabs(target) and os.path.isfile(os.path.join(target, ".git")) \
+                    and os.path.isfile(os.path.join(target, ".agentic", "task.env")):
+                reg["worktree"] = target
+                reg["bound_at"] = time.time()
+                save(p, reg)
+            return                                   # let `agentic bind` itself run and report
+    if role not in WRITERS or host != "codex":
+        return        # readers aren't confined; Claude Code isolates natively; OpenCode rewrites args itself
+    if not wt:
+        if tool in ("Bash", "bash", "shell", "apply_patch", "Write", "Edit", "MultiEdit", "write", "edit"):
+            deny("bind your worktree first — your first command must be `agentic bind <worktree>` "
+                 "(the absolute path from your dispatch message). Until then shell commands and edits are refused.")
+        return
+    if tool in ("Bash", "bash", "shell"):
+        try:
+            first = shlex.split(cmd.strip().split("&&")[0])
+        except ValueError:
+            first = []
+        if not (len(first) == 2 and first[0] == "cd" and os.path.realpath(first[1]) == os.path.realpath(wt)):
+            deny("run every shell command inside your worktree: `cd %s && %s`" % (wt, cmd.strip()[:200]))
+        return
+    if tool == "apply_patch":
+        bad = []
+        for a, b in PATCH_PATHS.findall(cmd):
+            path = (a or b).strip()
+            full = path if os.path.isabs(path) else os.path.join(cwd, path)
+            if not under(full, wt):
+                bad.append(path)
+        if bad:
+            deny("edit only files inside your worktree %s — use absolute paths under it (not: %s)" % (wt, ", ".join(bad[:5])))
+        return
+    fp = ti.get("file_path") or ti.get("filePath") or ""
+    if fp and not under(fp if os.path.isabs(fp) else os.path.join(cwd, fp), wt):
+        deny("edit only files inside your worktree %s — use %s" % (wt, os.path.join(wt, os.path.basename(fp))))
+
+
+def main():
+    if os.environ.get("SKIP_HOOKS") == "1":
+        return
+    payload = json.loads(sys.stdin.read() or "{}")
+    ev = payload.get("hook_event_name") or ""
+    cwd = payload.get("cwd") or os.getcwd()
+    agent_id = payload.get("agent_id") or ""
+    if not agent_id or not os.path.isdir(_paths.docs(cwd)):
+        return                                        # main-thread call, or not an agentic project
+    host = _usage.host_of(payload)
+    role = role_of(payload.get("agent_type"))
+    p = reg_path(cwd, agent_id)
+    if ev == "SubagentStart":
+        reg = load(p)
+        reg.update({"agent_id": agent_id, "agent_type": role, "session_id": payload.get("session_id"),
+                    "host": host, "started": time.time()})
+        save(p, reg)
+    elif ev == "SubagentStop":
+        reg = load(p) or {"agent_id": agent_id, "agent_type": role, "session_id": payload.get("session_id"), "host": host}
+        reg["stopped"] = time.time()
+        atp = payload.get("agent_transcript_path") or _usage.agent_transcript(payload, agent_id)
+        if atp:
+            reg["transcript"] = atp
+        save(p, reg)
+    elif ev == "PreToolUse":
+        pre_tool(payload, cwd, agent_id, role, host)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        pass
+    sys.exit(0)

@@ -6,6 +6,8 @@ Checks (bin/gate-stage2-complete):
 - [ ] sprintN/plan.md references every story; references no non-existent story.
 - [ ] Every plan.md bullet has a concrete test file path AND fn name (gate-plan-shape).
 - [ ] No story appears in two waves.
+- [ ] Sprint containment: no reference to a LATER sprint's story IDs; no task defers
+      work into the next/a later sprint (context is cleared between sprints).
 
 Failure verb: RE-PLAN (back to this persona; human is present).
 Enforced by: [OPEN-3] hook at handoff OR supervisor self-check. This is the single
@@ -17,6 +19,6 @@ Anti-patterns (extends the playbook's planning anti-patterns — reject the plan
 - A story missing its connections list — a change becomes untraceable to what it breaks.
 (Enforces the five-part Intent, carried from intake.md into stories.md.)
 
-Self-check (v0.2): the worker runs `bin/selfcheck` (this same gate) BEFORE reporting
+Self-check (v0.2): the worker runs `selfcheck` (this same gate) BEFORE reporting
 done — nothing advances past a failing self-check. The SubagentStop hook runs the same
 gate as the backstop.

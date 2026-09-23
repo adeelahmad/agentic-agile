@@ -20,6 +20,93 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.10.0] - 2026-09-23
+
+### Added
+- **Tools install themselves and are always on PATH.** New `SessionStart` hook
+  `bin/ensure-tools` builds `md-db` + `ctx-symbols` from the bundled source into the
+  plugin data dir (background, once per plugin version; `--sync` to force) and tells the
+  model where every tool is. `bin/md-db` / `bin/ctx-symbols` are PATH shims (the
+  platform puts the plugin's `bin/` on PATH for every session and sub-agent) that exec
+  the real binary. Agents now call `selfcheck`, `md-db`, `budget`, … by bare name, and
+  the prompts tell them never to search. `gate-tooling` tries to install before blocking.
+- **Per-attempt time box (tokens + wall clock).** New `bin/budget`: soft limits (default
+  40k tokens / 10 min) warn the worker inside its tool results; hard limits (60k / 15
+  min) deny further tool calls except the output.md report, release the worker's
+  SubagentStop gate unverified, and surface a KILL to the supervisor via `budget watch`.
+  Configurable per project (`docs/agents/defaults.md`, via init) and per task
+  (`budget:` line in tasks.md).
+- **Orchestrator loop: dispatch → sleep → sweep.** The supervisor dispatches background
+  workers, sleeps on `budget watch`, then `TaskStop`s workers past their hard limit.
+- **Mid-sprint re-plan route.** A task killed at its hard limit is not retried: the
+  sprint pauses, the planner is dispatched with `mode: replan`
+  (`pipeline/planning/02-planner/replan.template.md`) to split it (`split_from:`),
+  leaving done tasks untouched, and the sprint resumes. Capped per task lineage
+  (`AGENTIC_MAX_REPLANS`, default 2; `budget replans`). New execution.log phases
+  `budget` and `replan`.
+- **Self-contained sprints.** The planner prompt requires every sprint to be completable
+  on its own (context is cleared between sprints); `gate-stage2-complete` blocks
+  references to a later sprint's stories and work deferred into a later sprint. The
+  harness asks for `/clear` at each sprint boundary.
+
+- **Init confirms the project setup with the human.** `/agentic-agile:init` runs
+  `agentic-init --show` (limits, models, the `.gitignore` edit, whether `docs/agents/` is
+  tracked — default no — and the commit author — default the human's git identity, no
+  Claude trailers), asks, then `agentic-init --apply` writes `docs/agents/defaults.md`,
+  the managed `.gitignore` lines and the repo-local git author. The hooks read limits
+  from that file; the SessionStart hook re-applies the `.gitignore` lines every session.
+- **`gate-commit-author`** (PreToolUse · Bash): denies commits with another author,
+  identity overrides, or Claude co-author/attribution trailers (unless opted in).
+- **One fixed layout** (`bin/_paths.sh` / `_paths.py`): run data lives only in
+  `<project>/.agentic/{transcripts,budget,ledger,logs,state}`; no model-chosen or
+  per-worktree path, no task.env override. Capture hooks write nothing in a repo that
+  isn't an agentic-agile project.
+- **Token ledger + sprint stats + handoff, by the harness** (`bin/stats`): Stop and
+  SubagentStop rebuild `.agentic/ledger/<session>.jsonl` from the transcripts (main +
+  sub-agents). When FINAL-GATE passes, `gate-final` runs `stats sprint-close`:
+  `sprintN/stats.md` (tasks, attempts, gate passes/blocks, budget stops, re-plans,
+  tokens per sprint/session/project, by role and model, human messages) and
+  `docs/agents/NEXT.md` (orchestrator handoff). The next Stop shows the human the totals
+  and asks for `/clear`; the SessionStart hook loads `NEXT.md` into the fresh context.
+  `stats show` prints totals any time. Every gate verdict is logged to
+  `.agentic/logs/gates.jsonl`.
+
+- **Codex and OpenCode support — full feature parity.** `agentic install codex|opencode
+  [--project DIR|--global] [--uninstall]` renders the 9 role agents (Codex TOML /
+  OpenCode markdown), skills and the init command from this plugin's own sources.
+  - **Codex** loads this repo's `.claude-plugin` manifests and `hooks/hooks.json`
+    natively (same events, `CLAUDE_PLUGIN_ROOT`); hooks were made Codex-aware:
+    `apply_patch` edits (supervisor scope, report-only writes at the hard limit),
+    rollout token usage (`.jsonl`/`.zst`, cumulative totals), sub-agent rollouts found
+    by thread id.
+  - **OpenCode** gets a generated plugin (`hosts/opencode/agentic-agile.js`) that maps
+    its hooks onto the same scripts: deny by throwing, context appended to tool output,
+    `session.abort` for the hard stop, the role gate on the `task` result (a block
+    re-prompts the sub-agent up to 3 rounds), usage written Claude-shaped for the ledger,
+    the handoff in the system prompt, `bin/` on PATH via `shell.env`.
+  - **Worker isolation without built-in worktrees:** `agentic task-worktree add
+    <TASK_ID>` + the worker's first command `agentic bind <path>`; `host-adapter` then
+    confines it (Codex: commands/patches outside the worktree are denied; OpenCode:
+    rewritten into it) and the SubagentStop gate runs inside the bound worktree.
+  - `agentic` — one dispatcher for every tool (`agentic selfcheck`, `agentic init …`),
+    linked into `~/.local/bin` where the host has no plugin PATH.
+  - `_usage.py` — one token reader for all three hosts (budget + ledger).
+  - CI job `hosts`: Codex hook-runner emulation (14 checks) + OpenCode plugin against a
+    mock client (18 checks) — `make test-hosts`.
+
+### Changed
+- **The hard-limit kill is deterministic:** after one chance to write its report and 3
+  refused calls, the time-box hook stops the worker itself (PostToolUse
+  `continue: false`); `budget watch` reports `STOPPED`, with `TaskStop` only a backstop.
+- `gate-final` also checks `plan-ready.md` in the sprint's main-tree docs (a worker
+  worktree has `docs/agents/` sparse-checked out).
+- The supervisor may not hand-edit `defaults.md`, `NEXT.md` or `stats.md`.
+- **Models:** planning agents (intake, standards, planner, archivist) default to
+  `claude-opus-5-5`; execution agents and the orchestrator skill default to `sonnet`.
+  Per-project override via `AGENTIC_MODEL_PLANNING` / `AGENTIC_MODEL_WORKER` in defaults.md.
+- Gates detect backends with `ensure-tools --resolve` (the real binary), not
+  `command -v` (which would now find the shim).
+
 ## [0.9.0] - 2026-07-03
 
 ### Added

@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# ensure-tools — SessionStart hook: make the bundled tools FINDABLE, every session.
+#
+# Agents kept burning tokens hunting for md-db / ctx-symbols / selfcheck. This hook
+# removes the hunt:
+#   1. Locates md-db + ctx-symbols (plugin data dir, PATH, ~/.local/bin, ~/.cargo/bin).
+#   2. If either is missing (or was built for an older plugin version) and cargo is
+#      available, builds them from the bundled source IN THE BACKGROUND into the plugin
+#      data dir — a SessionStart hook must return fast; gate-tooling waits for an
+#      in-flight build before it blocks.
+#   3. The platform already puts this plugin's bin/ on PATH, and bin/md-db +
+#      bin/ctx-symbols are shims that exec the real binary — so `md-db` resolves in every
+#      Bash call, sub-agents included. Belt and braces: the tools dir is also appended to
+#      CLAUDE_ENV_FILE when the harness provides one.
+#   4. Tells the model, once, exactly where everything is (additionalContext), so no
+#      agent ever searches for them.
+#
+#   ensure-tools            SessionStart hook mode (reads hook JSON on stdin; ignored)
+#   ensure-tools --sync     build now, in the foreground (make install / manual repair)
+#   ensure-tools --wait [s] block until an in-flight background build ends (default 600s)
+#   ensure-tools --where    print the tools dir
+#   ensure-tools --resolve T  print the REAL binary for T (never the bin/ shim); exit 1 if none
+#
+# NEVER blocks the session (hook mode always exits 0). Opt out: AGENTIC_NO_AUTOINSTALL=1.
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$HERE/.." && pwd)}"
+DATA="${CLAUDE_PLUGIN_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/agentic-agile}"
+TOOLS_BIN="$DATA/bin"
+LOG="$DATA/install.log"
+LOCK="$DATA/install.lock"
+STAMP="$DATA/bin/.version"
+VERSION="$(sed -nE 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "$ROOT/.claude-plugin/plugin.json" 2>/dev/null | head -1)"
+
+mkdir -p "$TOOLS_BIN" 2>/dev/null || true
+
+# First REAL binary for a tool: the plugin's data dir, the usual install dirs, then PATH
+# — skipping this bin/ dir, whose md-db / ctx-symbols are only shims that exec this.
+find_tool() {
+  local t="$1" d
+  local IFS=:
+  for d in "$TOOLS_BIN" "$HOME/.local/bin" "$HOME/.cargo/bin" $PATH; do
+    [ -n "$d" ] || continue
+    [ "$(cd "$d" 2>/dev/null && pwd -P)" = "$(cd "$HERE" && pwd -P)" ] && continue
+    [ -x "$d/$t" ] && [ ! -d "$d/$t" ] && { echo "$d/$t"; return 0; }
+  done
+  return 1
+}
+
+have_all() { find_tool md-db >/dev/null && find_tool ctx-symbols >/dev/null; }
+
+# Our own build is stale when the plugin version moved (a user-installed copy elsewhere
+# on PATH is theirs to manage — we never rebuild over it).
+own_stale() {
+  [ -x "$TOOLS_BIN/md-db" ] || [ -x "$TOOLS_BIN/ctx-symbols" ] || return 1
+  [ "$(cat "$STAMP" 2>/dev/null)" != "$VERSION" ]
+}
+
+build_running() {
+  [ -d "$LOCK" ] || return 1
+  local pid; pid="$(cat "$LOCK/pid" 2>/dev/null)"
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then return 0; fi
+  rm -rf "$LOCK" 2>/dev/null; return 1          # stale lock from a dead build
+}
+
+# Build both backends into TOOLS_BIN. Target dir lives in DATA, not the plugin cache,
+# so a plugin update doesn't lose the incremental build and the cache stays pristine.
+do_build() {
+  command -v cargo >/dev/null 2>&1 || { echo "cargo not found — install Rust (https://rustup.rs) or put md-db + ctx-symbols on PATH yourself"; return 1; }
+  local tgt="$DATA/target" rc=0
+  echo "==> $(date -u +%FT%TZ) building agentic-agile tools v$VERSION"
+  # cd (not --manifest-path): cargo discovers .cargo/config.toml from the cwd.
+  ( cd "$ROOT/tools/ctx-symbols" && CARGO_TARGET_DIR="$tgt/ctx-symbols" cargo build --release --locked ) \
+    && cp "$tgt/ctx-symbols/release/ctx-symbols" "$TOOLS_BIN/ctx-symbols" || rc=1
+  ( cd "$ROOT/tools/md-db" && CARGO_TARGET_DIR="$tgt/md-db" cargo build --release --locked ) \
+    && cp "$tgt/md-db/release/md-db" "$TOOLS_BIN/md-db" || rc=1
+  [ "$rc" = 0 ] && printf '%s\n' "$VERSION" > "$STAMP"
+  echo "==> done rc=$rc"
+  return "$rc"
+}
+
+start_background_build() {
+  build_running && return 0
+  mkdir "$LOCK" 2>/dev/null || return 0          # another session won the race
+  (
+    echo "$BASHPID" > "$LOCK/pid"
+    do_build >> "$LOG" 2>&1
+    rm -rf "$LOCK"
+  ) </dev/null >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+}
+
+wait_build() {
+  local max="${1:-600}" i=0
+  while build_running && [ "$i" -lt "$max" ]; do sleep 2; i=$((i + 2)); done
+  ! build_running
+}
+
+path_line() { printf 'export PATH="%s:%s:$PATH"\n' "$TOOLS_BIN" "$ROOT/bin"; }
+
+case "${1:-}" in
+  --where) echo "$TOOLS_BIN"; exit 0 ;;
+  --resolve) find_tool "${2:?tool name}"; exit $? ;;
+  --wait)  wait_build "${2:-600}"; have_all; exit $? ;;
+  --sync)
+    wait_build 600
+    if ! have_all || own_stale; then do_build 2>&1 | tee -a "$LOG"; fi
+    have_all && { echo "tools: $(find_tool md-db)  $(find_tool ctx-symbols)"; exit 0; }
+    exit 1 ;;
+  -h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+
+# ── SessionStart hook mode ─────────────────────────────────────────
+[ -t 0 ] || cat >/dev/null 2>&1 || true            # drain the hook payload (if piped)
+
+if [ "${AGENTIC_NO_AUTOINSTALL:-}" != "1" ] && { ! have_all || own_stale; }; then
+  start_background_build
+fi
+
+# Persist PATH for every later Bash call this session (sub-agents inherit it).
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  grep -qF "$TOOLS_BIN:$ROOT/bin" "$CLAUDE_ENV_FILE" 2>/dev/null || path_line >> "$CLAUDE_ENV_FILE"
+fi
+
+# One-time orientation for the model, so nobody spends tokens looking for the tools.
+if have_all; then
+  status="md-db: $(find_tool md-db) · ctx-symbols: $(find_tool ctx-symbols)"
+elif build_running; then
+  status="md-db/ctx-symbols are BUILDING in the background (log: $LOG). \`ensure-tools --wait\` blocks until done; gate-tooling waits automatically"
+else
+  status="md-db/ctx-symbols are NOT installed and could not be built (no cargo?). Run \`make install\` or see $LOG. Planning still works (grep fallback); execution is blocked by gate-tooling."
+fi
+ctx="agentic-agile tools — do NOT search for them. ${status}. Call every tool as \`agentic <tool>\` (e.g. \`agentic selfcheck\`, \`agentic budget status\`, \`agentic stats show\`; \`agentic --list\` shows them). If \`agentic\` is not on PATH use the absolute path $ROOT/bin/agentic. On Claude Code and OpenCode the bare names (\`selfcheck\`, \`md-db\`, …) work too. Schemas: $ROOT/schemas/."
+
+if command -v python3 >/dev/null 2>&1; then
+  CTX="$ctx" python3 -c 'import json,os;print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":os.environ["CTX"]}}))'
+else
+  printf '%s\n' "$ctx"
+fi
+exit 0

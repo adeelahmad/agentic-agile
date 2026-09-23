@@ -3,6 +3,7 @@
 # md-db. If md-db is absent, WARN and fall back to a frontmatter check — never a
 # false block, never a silent pass of a real check.
 set -uo pipefail
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; export PATH="$BIN_DIR:$PATH"  # md-db shim -> real binary
 
 # Resolve the written file path: arg, env, or the PostToolUse stdin JSON.
 f="${1:-${TOOL_FILE_PATH:-}}"
@@ -27,7 +28,7 @@ case "$(basename "$f")" in
   *) exit 0 ;;
 esac
 
-if command -v md-db >/dev/null 2>&1; then
+if "$BIN_DIR/ensure-tools" --resolve md-db >/dev/null 2>&1; then
   md-db validate "$(dirname "$f")" --schema "${CLAUDE_PLUGIN_ROOT}/schemas/$schema" \
     || { echo "BLOCK[gate-validate-artifact]: $f failed $schema" >&2; exit 2; }
 else

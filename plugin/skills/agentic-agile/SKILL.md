@@ -13,6 +13,7 @@ description: >-
   sprints, stories, or TDD/orchestration, even if "agile" is never said. A fresh
   build/fix/improve request that arrives mid-session is NEW SCOPE: it re-enters this
   skill's planning (a new sprint or new stories), never ad-hoc hand-editing.
+model: sonnet
 ---
 
 # agentic-agile — the supervisor's playbook
@@ -24,6 +25,78 @@ separate orchestrator binary — it is you.
 
 This file is the canonical playbook (it replaces the repo's standalone planning
 doc). It folds the structural-review corrections directly into the process.
+
+## Models (who thinks with what)
+
+| Role | Default model |
+|---|---|
+| **You, the supervisor/orchestrator** | `sonnet` — you dispatch, sleep, sweep; you don't author |
+| Planning: `intake`, `standards`, `planner` (incl. re-plans), `archivist` | `claude-opus-5-5` |
+| Execution: `red-worker`, `scaffolder`, `green-worker`, `structural-reviewer`, `final-gate` | `sonnet` |
+
+The agent frontmatter carries these defaults. The project's confirmed choice lives in
+`docs/agents/defaults.md` (`AGENTIC_MODEL_PLANNING`, `AGENTIC_MODEL_WORKER`): pass that
+value as the Agent call's `model` on every dispatch of that group.
+
+## Project setup comes first (init) — and where everything lives
+
+If `docs/agents/defaults.md` does not exist, the project was never initialized: run the
+init flow (`skills/init/SKILL.md` steps 1–2 — `agentic init --show`, ask the human, then
+`agentic init --apply …`) **before any planning**. It confirms with the human the limits,
+models, the `.gitignore` edit, whether `docs/agents/` is tracked (default no), and the
+commit author (default: the human's git identity, no Claude trailers). The harness writes
+the file; you never hand-edit `defaults.md`, `NEXT.md` or `stats.md` (a hook blocks it).
+
+The layout is FIXED by `bin/_paths.sh` — never invent another directory name:
+
+| Path | What | Git |
+|---|---|---|
+| `.agentic/transcripts/` | full capture (global.jsonl + per task) | always ignored |
+| `.agentic/budget/` | one `<agent_id>.json` per worker attempt (time box) | always ignored |
+| `.agentic/ledger/` | one `<session_id>.jsonl` per session (token usage) | always ignored |
+| `.agentic/logs/gates.jsonl` | every gate verdict | always ignored |
+| `.agentic/state/` | sprint closes, locks, markers | always ignored |
+| `docs/agents/defaults.md` | confirmed settings | ignored unless tracked |
+| `docs/agents/NEXT.md` | orchestrator handoff, reloaded after `/clear` | ignored unless tracked |
+| `docs/agents/sprintN/` | sprint artifacts + `stats.md` | ignored unless tracked |
+
+Commits are authored by the configured human author only; `gate-commit-author` blocks a
+commit with another author or (unless allowed) a Claude co-author / attribution trailer. This
+skill's `model: sonnet` covers the turn it loads in; for a long autonomous run the human
+starts the session on Sonnet (`/model sonnet` or `claude --model sonnet`).
+
+## Running on Codex or OpenCode (same playbook, host vocabulary)
+
+The gates, time box, ledger, stats and handoff are the SAME scripts on every host (Codex
+runs this plugin's `hooks/hooks.json` natively; OpenCode runs them through the plugin
+`agentic install opencode` generates). Only the dispatch vocabulary differs:
+
+| Playbook step | Claude Code | Codex | OpenCode |
+|---|---|---|---|
+| Install | `/plugin install` | `agentic install codex` + `codex plugin add agentic-agile@agentic-agile-marketplace`, then trust hooks in `/hooks` | `agentic install opencode`, restart |
+| Dispatch a role | Agent tool, `subagent_type: <role>` | `spawn_agent`, `agent_type: <role>` | `task` tool, `subagent_type: <role>` |
+| Worker isolation | `isolation: "worktree"` | `agentic task-worktree add <TASK_ID>` → path; the worker's FIRST command is `agentic bind <path>` (hooks then confine it) | same as Codex (the plugin then rewrites its commands/edits into the worktree) |
+| Parallel / wait | `run_in_background` + `budget watch` | several `spawn_agent`, then `wait_agent` | several `task` calls in one message |
+| Stop a worker (backstop) | `TaskStop` | `close_agent` | — (the plugin aborts it) |
+| Merge a passed task | merge the worktree branch | merge `agentic/<TASK_ID>`, then `agentic task-worktree remove <TASK_ID>` | same as Codex |
+| Fresh context per sprint | `/clear` | `/clear` or `/new` | `/new` |
+
+On Codex/OpenCode the dispatch message MUST contain the worktree line — e.g. "Your
+worktree: /abs/.agentic/worktrees/S1-02-T3. First command: `agentic bind
+/abs/.agentic/worktrees/S1-02-T3`." — and `task.env` is written into that worktree before
+dispatch, exactly as on Claude Code. Models per role come from the generated agent files
+(`agentic install` renders them from `docs/agents/defaults.md`).
+
+## Tools are on PATH — never search for them
+
+On Claude Code this plugin's `bin/` is on PATH in every session and sub-agent (OpenCode:
+the plugin adds it; Codex: `agentic` is linked into ~/.local/bin), and a SessionStart
+hook (`ensure-tools`) installs `md-db` + `ctx-symbols` on first use (background build
+from the bundled source). Call everything as `agentic <tool>` — `agentic selfcheck`, `agentic md-db …`,
+`agentic budget …`, `agentic log-execution …` (on Claude Code and OpenCode the bare
+names work too; on Codex only `agentic` is on PATH, linked by `agentic install codex`).
+Never `find`/`which`/`ls` for them, and never tell a worker where they are — they know.
+If a backend reports "not installed", run `ensure-tools --sync` once (needs cargo).
 
 ## The two boundaries that define everything
 
@@ -95,8 +168,16 @@ doc). It folds the structural-review corrections directly into the process.
   to grep; it never silently passes a real check. Treat a WARN as a weakened gate,
   not a pass. **PLANNING may run degraded; EXECUTION may not** — the preflight
   `bin/gate-tooling` (SubagentStart on every execution role + your manual
-  pre-dispatch check) BLOCKS the first worker dispatch until both backends are on
-  PATH. Don't enter RED with grep-only gates.
+  pre-dispatch check) BLOCKS the first worker dispatch until both backends are
+  installed — it first tries to install them itself (`ensure-tools --sync`). Don't
+  enter RED with grep-only gates.
+- **Every worker attempt is time-boxed** (tokens + wall clock, soft + hard). A worker
+  killed at its hard limit is NEVER retried as-is and NEVER merged — its task goes to a
+  mid-sprint re-plan (Part B, "Budget overrun"). You may not raise a budget mid-sprint;
+  only the planner can, per task, in tasks.md.
+- **Each sprint is a clean-context unit.** Your context is cleared between sprints, so
+  everything a sprint needs lives on disk and every plan is self-contained (no task
+  spills into a later sprint; `gate-stage2-complete` enforces it).
 
 ================================================================================
 # PART A — PLANNING (interactive, human present)
@@ -117,9 +198,10 @@ artifacts under `docs/agents/sprintN/`.
   `WorktreeCreate`/`WorktreeRemove` hooks — these are NOT valid in a plugin manifest, only
   in settings.json. The supervisor can also create the worktree manually with
   `git worktree add`; `assert_worktree_isolation` validates a real linked worktree either way.)
-- `md-db` on PATH (optional) — validates `.md` artifacts against `schemas/*.kdl`;
-  absent → grep fallback.
-- `ctx-symbols` on PATH (optional) — symbol uniqueness/duplication; absent → grep fallback.
+- `md-db` + `ctx-symbols` — installed automatically by the `ensure-tools` SessionStart
+  hook (needs a Rust toolchain for the one-time build) and always on PATH. Absent →
+  planning gates fall back to grep; execution is blocked until they're built.
+- `python3` — the time-box hook (`budget`) and transcript capture use it.
 - The target repo's toolchain for the standards matrix (default target: Rust —
   `cargo fmt/clippy/test`); retarget by editing `standards.md` + the gates.
 A gate NEVER hard-fails on a missing backend — it WARNs and falls back. Never a silent pass.
@@ -183,6 +265,9 @@ docs/agents/sprintN/sN-NN-<slug>/
 ## The five planning steps (in order)
 
 **You DISPATCH the `planner` agent to author all five — you do not write them inline.**
+Each sprint's plan must be **self-contained**: every task finishes inside the sprint,
+nothing depends on a later sprint, nothing is "continued next sprint" — your context is
+cleared between sprints, so a spill-over would be lost.
 One `planner` dispatch per sprint's Stage-2 (or per story for a large sprint). Plan ONE
 sprint at a time: dispatch the planner, review its output, present it for the human's
 approval, then — only on "go" — start that sprint's execution. Do NOT batch-write every
@@ -192,7 +277,8 @@ future sprint's Stage-2 and chain straight into execution.
    (What's wanted · Constraints · Failure scenarios · Success scenarios ·
    Connections). A story missing failure-scenarios or connections is rejected.
 2. **tasks.md** per story — decompose into right-sized tasks (reviewable in one
-   sitting, revertable as one change, demo describable in one sentence).
+   sitting, revertable as one change, demo describable in one sentence) that ONE worker
+   attempt can finish inside the time box (default hard 60k tokens / 15 min).
 3. **validate.md** per story — the rubric, no judgement calls.
 4. **plan.md** per story — tests-only; both acceptance criteria and edge/failure
    cases; static-invariant tests where relevant; each bullet has a real
@@ -213,18 +299,23 @@ planning bind execution.
 Before the FIRST execution dispatch, run BOTH self-checks yourself:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/bin/gate-tooling                       # backends present?
-${CLAUDE_PLUGIN_ROOT}/bin/gate-stage2-complete docs/agents/sprintN
+gate-tooling                                  # backends installed? (auto-installs)
+gate-stage2-complete docs/agents/sprintN      # every story fully planned + contained?
 ```
 
-`gate-tooling` blocks (exit 2) unless `md-db` AND `ctx-symbols` are on PATH — unlike
-the per-step gates, execution will NOT start with grep-only fallback. If it blocks,
-run `make install` and put `~/.local/bin` on PATH (or `SKIP_HOOKS=1` to knowingly
-accept weakened gates). It also runs as a SubagentStart hook on every execution role.
+`gate-tooling` blocks (exit 2) unless `md-db` AND `ctx-symbols` are installed — unlike
+the per-step gates, execution will NOT start with grep-only fallback. It first waits for
+/ runs the one-time build itself; if it still blocks, the human needs a Rust toolchain
+(or `SKIP_HOOKS=1` to knowingly accept weakened gates). It also runs as a SubagentStart
+hook on every execution role.
+
+Also make sure `docs/agents/defaults.md` exists — if not, run the init flow first (see
+"Project setup comes first").
 
 `gate-stage2-complete` blocks unless **every** story in `stories.md` has a
-`sN-NN-<slug>/` dir with `tasks.md` + `validate.md` + `plan.md`, no `TBW` remains, and
-md-db validates the tree. Partial Stage-2 is forbidden — all-or-nothing per sprint.
+`sN-NN-<slug>/` dir with `tasks.md` + `validate.md` + `plan.md`, no `TBW` remains, the
+sprint is **self-contained** (no reference to a later sprint's stories, no work deferred
+into one), and md-db validates the tree. Partial Stage-2 is forbidden — all-or-nothing per sprint.
 Do not dispatch until both exit 0. (The PostToolUse `gate-validate-artifact`
 hook validates each artifact as you write it, regardless.)
 
@@ -247,7 +338,11 @@ worktree.
 ```
 docs/agents/
   memory.md                                      (you + human, at each retrospective)
-  .agentic/transcripts/  global.jsonl + <task>/{events,transcript}.jsonl  (git-ignored, never merged)
+  defaults.md                                    (agentic-init) confirmed limits, models, git settings
+  NEXT.md                                        (stats sprint-close) the post-/clear handoff
+  sprintN/stats.md                               (stats sprint-close) the sprint's numbers
+<project>/.agentic/                              run data, fixed layout (bin/_paths.sh), git-ignored:
+  transcripts/ budget/ ledger/ logs/ state/
   sprintN/
     stories.md plan.md intake.md standards.md    (you / planning activities)
     execution.log                                (you, via bin/log-execution)
@@ -266,7 +361,10 @@ docs/agents/
 per worktree (transient, git-ignored, removed on stop):
   .agentic/task.env        the per-task contract you write at dispatch (TASK_ID,
                            ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF,
-                           STORY_DIR, AGENTIC_TRANSCRIPTS_DIR) — the gates read this.
+                           STORY_DIR, BUDGET_*) — the gates and the time-box hook read
+                           this. (Store paths are fixed — never put paths for logs or
+                           transcripts in here.)
+  .agentic/budget-exceeded marker the time-box hook writes at a HARD limit
                            STORY_DIR is the ABSOLUTE path to sN-NN-<slug>/ (the comms dir).
   .agentic/scaffold-symbols  scaffolder-written production-symbol list (scaffold gate)
   .transcripts/            READ-ONLY task transcript staged in for the worker
@@ -276,7 +374,8 @@ per worktree (transient, git-ignored, removed on stop):
 
 - `init.md` (story-bound, **append-only**) — **you** APPEND one block per dispatch:
   `## <task> · attempt N · <role> · <ts>`, then `### Mandate / ### Scope (May / May Not)
-  / ### Inputs / ### Acceptance`, plus a `### Memory` block (the `memory.md` entries
+  / ### Inputs / ### Acceptance / ### Budget` (the resolved `BUDGET_*` numbers), plus a
+  `### Memory` block (the `memory.md` entries
   tagged for this role or `all`, top ~7) and — on a re-spawn — a `### Feedback` block
   derived from the prior `output.md`. It POINTS at `plan-ready.md`; never copies the
   spec. NEVER rewrite an earlier block. The file opens once with `--- type: init ---`.
@@ -302,7 +401,25 @@ The budget is **per task**: it is the count of that task's `output.md` blocks fo
 current role (the `attempt N` counter in the block header), and it **resets per task**.
 Default **MAX = 3 attempts** before you stop the inner loop and apply escalation (below).
 A long run of healthy waves can never trip "retries exhausted" because there is no
-cross-wave accumulation.
+cross-wave accumulation. (This is the GATE-failure retry. A BUDGET overrun is never
+retried — see "Budget overrun" below.)
+
+### Per-attempt time box (tokens + wall clock)
+
+Every `red-worker` / `scaffolder` / `green-worker` attempt runs under two budgets, each
+with a soft and a hard limit. Defaults are deliberately tight — **40k / 60k tokens,
+10 / 15 min** — and the project's confirmed values live in `docs/agents/defaults.md`; a single task
+may carry a planner-authored `budget:` override line in tasks.md. Tokens = the worker's
+current context + all its output tokens; time = wall clock since its first tool call.
+
+The hooks enforce it — you don't: `budget hook` (PreToolUse/PostToolUse on every tool
+call, SubagentStop) measures the worker from its own transcript and
+- at the **soft** limit tells the worker, inside its tool result, what is left and to
+  finish or end gracefully (and once more at 90% of hard);
+- at the **hard** limit gives the worker one chance to append its output.md report
+  (`status: re-plan`), denies every other tool call (3 refusals), then **stops the worker
+  itself** — PostToolUse `continue: false`. No model decides the kill. It also writes
+  `.agentic/budget-exceeded`, so the worker's SubagentStop gate releases it *unverified*.
 
 ## The feedback loop (exactly)
 
@@ -320,6 +437,51 @@ For each task attempt:
 
 The hook guarantees "you cannot pass a failed gate." You own the
 retry-vs-escalate decision.
+
+## The orchestrator loop — dispatch, sleep, sweep
+
+Your job during execution is small, and that is on purpose (it keeps your context short):
+
+1. **Dispatch** every task that can run now (the wave's RED, or GREEN, …) as
+   background agents — `run_in_background: true`, `isolation: "worktree"`, `model` from
+   defaults.md — after writing each `init.md` block + `task.env` (with
+   `BUDGET_*`). Log `start` lines.
+2. **Sleep.** Start `budget watch --interval 20 --grace 60` with `run_in_background:
+   true` and end your turn. Do nothing else: no polling, no reading worker output early.
+   You wake when a worker finishes (task notification) or when `budget watch` exits.
+3. **Sweep** on each wake:
+   - finished workers → read the gate verdict + latest `output.md` block, and proceed as
+     in the feedback loop (tick/merge on pass, retry within the gate-retry budget);
+   - `budget watch` printed `STOPPED …` lines (the hook already ended those workers) or
+     `KILL …` lines (backstop: the hook could not — `TaskStop` each, then `budget
+     mark-killed <agent_id>`) → log `log-execution wave-K budget SN-NN kill Tn
+     <tokens/elapsed>` for each, discard its worktree (never merge an overrun attempt).
+     Then take the **Budget overrun** route below — do not re-dispatch the task;
+   - still-running workers and no kill → start `budget watch` again and sleep.
+4. When nothing is running and nothing can be dispatched, the wave is done.
+
+`budget status` prints every tracked attempt's tokens/minutes vs its limits.
+
+## Budget overrun → mid-sprint re-plan (the re-plan route)
+
+A task killed at its hard limit is too big — retrying it would burn the same budget
+again. Instead:
+
+1. **Pause the sprint.** Let already-running workers finish (sleep/sweep as usual) but
+   dispatch nothing new.
+2. **Check the cap:** `budget replans SN-NN-Tn`. At the cap (`AGENTIC_MAX_REPLANS`,
+   default 2 splits per task lineage) → escalate as budget/no-progress (hard stop).
+3. **Dispatch the planner in re-plan mode** — append an init block from
+   `pipeline/planning/02-planner/replan.template.md` (`mode: replan`) listing: DONE tasks
+   (merged/ticked — must not be touched), KILLED tasks (with their tokens/minutes, last
+   output.md block, transcript path), NOT-STARTED tasks, and the budget in force. Log
+   `log-execution wave-K replan SN-NN start Tn`. The planner splits each killed task into
+   smaller ones (`split_from: Tn`), removes the original, and updates the waves.
+   (Autonomous: this re-plan does NOT wait for the human — splitting a task inside the
+   approved sprint scope is not a scope change. Scope changes still escalate.)
+4. **Re-validate:** `gate-stage2-complete docs/agents/sprintN` must pass again. Log
+   `replan SN-NN complete Tn`.
+5. **Resume** the sprint: dispatch the new tasks (from RED) and continue the loop.
 
 ## Wave loop — step by step (the run trace)
 
@@ -411,7 +573,9 @@ start the next wave's RED, or if this was the last wave, FINAL-GATE.
 - **foundation-poisoning** → HALT the dependency chain now (abandon its
   worktrees), keep merged waves.
 - **scope / plan defect** → human decision.
-- **budget / no-progress** → hard stop.
+- **time-box overrun** (a worker killed at its hard limit) → mid-sprint re-plan (split
+  the task), NOT a retry and NOT a hard stop — see "Budget overrun".
+- **gate-retry budget exhausted / no-progress / re-plan cap reached** → hard stop.
 
 All escalations RE-ENTER at the **planner** at the next planning session — NOT a
 full re-intake. Context preserved = `execution.log` + the story's `init.md`/`output.md`
@@ -430,6 +594,15 @@ escalation is what happens when revision is exhausted.
   whether to start the next sprint, which RE-ENTERS interactive planning (dispatch the
   planner for it). Never chain Sprint N → N+1 execution in one sweep, and never cross the
   planning→execution boundary without the human's explicit "go".
+- **Clear context at every sprint boundary — the harness drives it.** When FINAL-GATE
+  passes, `gate-final` runs `stats sprint-close`, which writes `sprintN/stats.md` (tasks
+  planned/completed, attempts, gate blocks, budget stops, re-plans, tokens for the
+  sprint/session/project, human messages) and `docs/agents/NEXT.md` (the orchestrator
+  handoff: what to do next, where we are, the carry-over). At your next Stop the hook
+  shows the human the totals and tells you to stop: report them, and ask the human to
+  run `/clear`. After `/clear` the SessionStart hook loads `NEXT.md` into the fresh
+  context — the next sprint starts from disk, never from conversation memory, which is
+  why each sprint's plan must be self-contained. `stats show` prints the totals any time.
 
 ## Anti-patterns (reject the sub-agent's output)
 
@@ -442,6 +615,9 @@ escalation is what happens when revision is exhausted.
 - Any sub-agent that edits a planning artifact.
 - A wave starting RED while its upstream wave is not GREEN-complete.
 - A final-gate report with any suppression or any unticked `plan-ready.md` box.
+- Merging a budget-killed attempt, retrying a budget-killed task as-is, or raising a
+  budget mid-sprint to "let it finish" — overruns go to the planner to be split.
+- A sprint plan with a task that spills into (or depends on) a later sprint.
 
 ## Known gate limitations (compensate in review)
 
@@ -459,7 +635,7 @@ escalation is what happens when revision is exhausted.
 
 **INVARIANT — nothing goes past a failing self-check.** Every step (intake, standards,
 planner, retrospective, RED, scaffold, GREEN, structural-review, final-gate) runs
-`bin/selfcheck` and must see `SELF-CHECK PASS` before it reports done or the supervisor
+`selfcheck` and must see `SELF-CHECK PASS` before it reports done or the supervisor
 advances. A failing self-check is never overridden. The SubagentStop hook runs the SAME
 gate as a backstop for every dispatched role, so a skipped self-check is still caught.
 
@@ -468,7 +644,7 @@ block (exit 2) no matter what. But don't wait for the hook: every worker, before
 writing `status: ok` in `output.md`, runs its OWN gate as a pre-flight check — the
 SAME script the hook will run:
 
-    bin/selfcheck            # runs your activity's gate, keyed off AGENT_ROLE in task.env
+    selfcheck                # runs your activity's gate, keyed off AGENT_ROLE in task.env
 
 If it prints `SELF-CHECK FAIL`, read the reason, fix the work, and re-run until it
 prints `SELF-CHECK PASS`. A PASS here means the hook will pass too — so you never burn
@@ -477,20 +653,28 @@ artifact, also run:
 
     md-db validate <dir> --schema schemas/<agent-io|planning-artifacts|memory>.kdl
 
-and fix any schema error before proceeding. The planner runs `bin/selfcheck planner`
+and fix any schema error before proceeding. The planner runs `selfcheck planner`
 (gate-stage2-complete) + `md-db validate` on the planning artifacts before the Stage-2
 handoff. This is the plan-validate-execute loop: the worker validates against the same
 source of truth the gate uses, so first-pass blocks become rare.
 
 ## Available scripts
 
-- `bin/selfcheck [role]` — run your activity's gate as a self-check before reporting
+All of these are on PATH — call them by bare name.
+
+- `selfcheck [role]` — run your activity's gate as a self-check before reporting
   (`selfcheck tooling` runs the execution preflight).
-- `bin/gate-tooling` — execution preflight; BLOCKS the first dispatch unless md-db +
-  ctx-symbols are on PATH (SubagentStart hook + manual pre-dispatch check).
-- `bin/gate-supervisor-scope` — PreToolUse guard; blocks the supervisor from writing
+- `gate-tooling` — execution preflight; BLOCKS the first dispatch unless md-db +
+  ctx-symbols are installed (auto-installs first; SubagentStart hook + manual check).
+- `ensure-tools` — SessionStart installer (`--sync` build now, `--wait`, `--resolve T`).
+- `budget` — the time box: `resolve` (BUDGET_* for task.env), `watch` (your sleep),
+  `status`, `mark-killed`, `replans` (split-cap check); `hook` is the hook entrypoint.
+- `stats show` — token totals (this session, per sprint, whole project); `stats
+  sprint-close` is run by gate-final, not by you.
+- `agentic-init` — project setup (`--show` / `--apply`), used by the init skill.
+- `gate-supervisor-scope` — PreToolUse guard; blocks the supervisor from writing
   production source while a sprint is live this session (code goes through workers).
-- `bin/transcripts …` — full interaction capture (managed by hooks; `transcripts --help`).
+- `transcripts …` — full interaction capture (managed by hooks; `transcripts --help`).
 - `bin/<gate>` — the individual gates (hook-invoked; see `bin/README.md` for each
   gate, its event/matcher, and exit codes).
 - `md-db validate … --schema schemas/*.kdl` — validate any `.md` artifact you write.
@@ -507,7 +691,7 @@ source of truth the gate uses, so first-pass blocks become rare.
   candidate that would (e.g. "skip the flaky test" → instead "fix the flakiness").
 
 ## Transcripts (full capture, file-based — bin/transcripts)
-- Store at `docs/agents/.agentic/transcripts/` (git-ignored, never merged):
+- Store at `.agentic/transcripts/` in the main tree (fixed path, git-ignored, never merged):
   - `global.jsonl` — thin cross-task causal stream (tool/file/prompt/stop markers) the
     retrospective scans without reading every payload.
   - `<task>/events.jsonl` — the FULL hook payload per tool call (tool_input +
@@ -547,7 +731,8 @@ source of truth the gate uses, so first-pass blocks become rare.
 At dispatch, write `.agentic/task.env` into the worktree with `TASK_ID`, `ATTEMPT`,
 `AGENT_ROLE`, `STORY_DIR` (absolute path to the story dir — where `validate_comms` reads
 init.md/output.md), `SCOPE_GLOBS` (GREEN diff-scope), `SCAFFOLD_SYMBOLS` (or write
-`.agentic/scaffold-symbols`), `BASE_REF` (diff base), and `AGENTIC_TRANSCRIPTS_DIR`. The gate
+`.agentic/scaffold-symbols`), `BASE_REF` (diff base), and the
+four `BUDGET_*` lines printed by `budget resolve --tasks <STORY_DIR>/tasks.md --task Tn`. The gate
 library sources it, so the gates check the RIGHT task's scope/symbols/comms — not
 auto-discovered guesses.
 
@@ -558,5 +743,7 @@ auto-discovered guesses.
 - `schemas/` — md-db KDL schemas (`agent-io`, `planning-artifacts`, `ledger`).
 - `bin/` — the gate bodies + `log-execution`.
 - `tools/ctx-symbols/` — the symbol backend (build + install per its README).
-- Prereqs on PATH: `md-db` (artifact validation) and optional `ctx-symbols`
-  (code-structure checks). Both degrade gracefully to grep with a WARN.
+- `bin/_paths.sh` / `bin/_paths.py` — the one definition of the file layout.
+- Backends: `md-db` (artifact validation) and `ctx-symbols` (code-structure checks),
+  auto-installed by `ensure-tools`. Planning gates degrade to grep with a WARN if they
+  are missing; execution does not start without them.

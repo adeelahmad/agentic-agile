@@ -1,8 +1,18 @@
 {
   "hooks": {
+    "SessionStart": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/ensure-tools", "timeout": 30 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/session-start", "timeout": 15 } ] }
+    ],
     "PreToolUse": [
       { "matcher": "Write|Edit|MultiEdit|NotebookEdit", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-supervisor-scope" } ] }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-supervisor-scope" } ] },
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-commit-author", "timeout": 15 } ] },
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/host-adapter hook", "timeout": 15 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/budget hook pre", "timeout": 15 } ] }
     ],
     "UserPromptSubmit": [
       { "matcher": "*", "hooks": [
@@ -13,17 +23,20 @@
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-tooling" },
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/worktree-hygiene" } ] },
       { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/host-adapter hook", "timeout": 15 },
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts stage-in" } ] }
     ],
     "PostToolUse": [
       { "matcher": "Write", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-validate-artifact" } ] },
       { "matcher": "*", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts record" } ] }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts record" },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/budget hook post", "timeout": 15 } ] }
     ],
     "Stop": [
       { "matcher": "*", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts snapshot" } ] }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts snapshot" },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/stats hook", "timeout": 60 } ] }
     ],
     "SubagentStop": [
       { "matcher": "intake", "hooks": [
@@ -44,8 +57,12 @@
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-structural-integrity" } ] },
       { "matcher": "final-gate", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/gate-final" } ] },
+      { "matcher": "red-worker|scaffolder|green-worker", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/budget hook stop", "timeout": 15 } ] },
       { "matcher": "*", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts stop" } ] }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/host-adapter hook", "timeout": 15 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/transcripts stop" },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/stats hook", "timeout": 60 } ] }
     ]
   }
 }
