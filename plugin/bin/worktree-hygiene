@@ -55,7 +55,12 @@ fi
 # awk field-splitting — a $2-only split truncates at the first space in the path.
 main="$(git -C "$WT" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p' | head -1)"
 [ -n "$main" ] || main="$(git -C "$WT" rev-parse --show-toplevel 2>/dev/null)"
-if [ -n "$main" ]; then
+# A project that ran init has its .gitignore choice in docs/agents/defaults.md —
+# agentic-init owns the managed lines then. Without it, fall back to the minimal
+# protective pair below so run data can never leak into a commit.
+if [ -n "$main" ] && [ -f "$main/docs/agents/defaults.md" ]; then
+  ( cd "$main" && "$(dirname "${BASH_SOURCE[0]}")/agentic-init" --ensure-gitignore ) >/dev/null 2>&1 || true
+elif [ -n "$main" ]; then
   gi="$main/.gitignore"
   touch "$gi" 2>/dev/null || true
   need=0
@@ -66,7 +71,7 @@ if [ -n "$main" ]; then
     # Bounded mkdir-lock: multiple workers can hit this on the SAME first dispatch
     # (mkdir is atomic; a plain grep-then-append check-then-act is not). Only taken
     # when something's actually missing, so steady-state dispatches never pay for it.
-    lockdir="$main/.agentic/.gitignore.lock"
+    lockdir="$main/.agentic/state/gitignore.lock"
     mkdir -p "$(dirname "$lockdir")" 2>/dev/null || true
     tries=0
     while ! mkdir "$lockdir" 2>/dev/null; do

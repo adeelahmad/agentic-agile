@@ -53,9 +53,24 @@ A copy on PATH or in `~/.local/bin` is used instead of building a second one.
 Every execution-worker attempt is time-boxed on **tokens and wall clock**, each with a
 soft limit (the worker is warned inside its tool results) and a hard limit (the worker
 is stopped, and its task is split by the planner mid-sprint instead of retried).
-Defaults are tight: **40k / 60k tokens, 10 / 15 min**. Override both budgets and models
-per project in `docs/agents/agentic.conf` (template: `templates/agentic.conf`); a
-single task can carry a planner-authored `budget:` line in its tasks.md section.
+Defaults are tight: **40k / 60k tokens, 10 / 15 min**. At the hard limit the hook
+itself stops the worker (PostToolUse `continue: false`) — no model decides the kill.
+
+## Init, layout, stats and the handoff
+
+`/agentic-agile:init` shows the defaults and asks you to confirm: the limits, the
+models, adding `.agentic/` + `.transcripts/` to `.gitignore`, whether `docs/agents/` is
+tracked in git (default **no**), and the commit author (default: **your** git identity,
+no Claude co-author trailers — `gate-commit-author` enforces it). The harness saves the
+answers in `docs/agents/defaults.md`.
+
+Run data lives at one fixed path, `.agentic/` (transcripts, budget, token ledger, gate
+log, state), defined once in `bin/_paths.sh` and always git-ignored. When FINAL-GATE
+passes the harness writes `docs/agents/sprintN/stats.md` (tasks, attempts, gate blocks,
+budget stops, re-plans, tokens for the sprint / session / project, human messages) and
+`docs/agents/NEXT.md`; it shows you the totals and asks for `/clear`, and the
+SessionStart hook reloads `NEXT.md` into the fresh context. `stats show` prints token
+totals any time.
 
 ## Install the plugin
 
@@ -131,6 +146,6 @@ MIT — see `LICENSE`.
   (the `archivist`) distills it into `docs/agents/memory.md`, which is injected
   (role-scoped) into each `init.md` `# Memory` section.
 - The gates read their per-task contract (`TASK_ID`, `SCOPE_GLOBS`, `SCAFFOLD_SYMBOLS`,
-  `BASE_REF`, `AGENTIC_TRANSCRIPTS_DIR`) from `.agentic/task.env`, written by the supervisor
+  `BASE_REF`, `BUDGET_*`) from `.agentic/task.env`, written by the supervisor
   into each worktree at dispatch. `.agentic/` and `.transcripts/` are git-ignored and never
   merged.

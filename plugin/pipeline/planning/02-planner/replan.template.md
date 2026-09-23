@@ -19,7 +19,7 @@ killed. Split them into smaller tasks that fit the budget. Do not retry them as-
 
 ## Killed at hard limit (SPLIT these)
 - <SN-NN Tk> — <tokens used>/<tokens_hard> tokens, <minutes>/<time_hard> min, role <red|green>;
-  last output.md block: <path>#<header>; transcript: docs/agents/.agentic/transcripts/<task>/
+  last output.md block: <path>#<header>; transcript: .agentic/transcripts/<task>/
 
 ## Not started (may re-size if the split changes the dependency graph)
 - <SN-NN Tk>

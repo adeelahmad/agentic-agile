@@ -52,7 +52,7 @@ agent_type="$(field agent_type)"
 [ -n "$agent_type" ] && exit 0
 
 root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-lock="$root/docs/agents/.agentic/sprint.lock"   # under git-ignored .agentic/
+lock="$root/.agentic/state/sprint.lock"          # fixed path (bin/_paths.sh), git-ignored
 
 # Fallback (only if a payload ever lacks agent_type): a worktree task.env naming a
 # dispatched role still exempts that agent.
@@ -76,6 +76,11 @@ case "$file" in docs/agents/*|*/docs/agents/*)
     echo "  Dispatch it (it writes the artifact); you review and approve the output. You own" >&2
     echo "  only plan-ready.md / init.md / execution.log / memory.md." >&2
     echo "  (Deliberate out-of-band edit outside the pipeline? Re-run with SKIP_HOOKS=1.)" >&2
+    exit 2 ;;
+  defaults.md|NEXT.md|stats.md)
+    echo "BLOCK[$GATE_NAME]: $base is written by the harness, never by hand:" >&2
+    echo "    defaults.md → \`agentic-init --apply …\` (the init skill, after the human confirms)" >&2
+    echo "    NEXT.md / sprintN/stats.md → \`stats sprint-close\` (runs when FINAL-GATE passes)" >&2
     exit 2 ;;
   esac ;;
 esac

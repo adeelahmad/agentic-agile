@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""gate-commit-author — PreToolUse(Bash): commits are authored by the HUMAN.
+
+The author chosen at init (docs/agents/defaults.md: COMMIT_AUTHOR_NAME/EMAIL, applied as
+the repo's local git config) is the only identity a `git commit` may use, and unless the
+human opted in (CLAUDE_COAUTHOR=yes) no Claude co-author/attribution trailer may be
+added. Checked deterministically on the command text before it runs:
+
+  - a Claude/Anthropic `Co-Authored-By:` trailer or "Generated with Claude Code" line
+  - `--author=…`, `-c user.name=/user.email=…`, or GIT_AUTHOR_*/GIT_COMMITTER_* env that
+    names someone other than the configured author
+  - the repo's effective `git config user.email` differing from the configured author
+
+Denies with the reason (the model fixes the command). No defaults.md -> no opinion.
+Honors SKIP_HOOKS=1. Never errors a tool call on an internal failure.
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import _paths  # noqa: E402
+
+COMMIT = re.compile(r"(^|[;&|(\s])git(\s+-[cC]\s+\S+|\s+--?[a-z-]+(=\S+)?)*\s+commit\b")
+CLAUDE_TRAILER = re.compile(r"co-authored-by:[^\n]*(claude|anthropic)|noreply@anthropic\.com|generated with \[?claude code", re.I)
+
+
+def deny(reason):
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                             "permissionDecisionReason": "gate-commit-author: " + reason}}))
+    return 0
+
+
+def main():
+    if os.environ.get("SKIP_HOOKS") == "1":
+        return 0
+    payload = json.loads(sys.stdin.read() or "{}")
+    if payload.get("tool_name") != "Bash":
+        return 0
+    cmd = (payload.get("tool_input") or {}).get("command") or ""
+    if not COMMIT.search(cmd):
+        return 0
+    cwd = payload.get("cwd") or os.getcwd()
+    if not os.path.isfile(_paths.defaults_file(cwd)):
+        return 0
+    st = _paths.settings(cwd)
+    name, email = st["COMMIT_AUTHOR_NAME"], st["COMMIT_AUTHOR_EMAIL"]
+    who = "%s <%s>" % (name, email)
+
+    if str(st["CLAUDE_COAUTHOR"]).lower() != "yes" and CLAUDE_TRAILER.search(cmd):
+        return deny("this project's commits carry NO Claude co-author/attribution (docs/agents/defaults.md: "
+                    "CLAUDE_COAUTHOR=no). Remove the Co-Authored-By/Generated-with lines and commit again.")
+    if not (name or email):
+        return 0
+    m = re.search(r"--author[= ]\s*(['\"])(.*?)\1|--author=(\S+)", cmd)
+    if m:
+        given = m.group(2) or m.group(3) or ""
+        if (email and email.lower() not in given.lower()) or (name and not email and name not in given):
+            return deny("commits must be authored by %s (defaults.md), not %r. Drop --author." % (who, given))
+    for var, want in (("user.name", name), ("user.email", email)):
+        for v in re.findall(r"-c\s+%s=(?:'([^']*)'|\"([^\"]*)\"|(\S+))" % re.escape(var), cmd):
+            got = next(x for x in v if x) if any(v) else ""
+            if want and got != want:
+                return deny("do not override git %s (%r); commits are authored by %s." % (var, got, who))
+    env_re = r"\b(GIT_(?:AUTHOR|COMMITTER)_(?:NAME|EMAIL))=(?:'([^']*)'|\"([^\"]*)\"|(\S+))"
+    for var, q1, q2, bare in re.findall(env_re, cmd):
+        got = q1 or q2 or bare
+        want = email if var.endswith("EMAIL") else name
+        if want and got != want:
+            return deny("do not set %s (%r); commits are authored by %s." % (var, got, who))
+    try:
+        eff = subprocess.run(["git", "-C", cwd, "config", "user.email"], capture_output=True, text=True, timeout=5).stdout.strip()
+    except Exception:
+        eff = email
+    if email and eff and eff != email:
+        return deny("this repo's git identity is %r but commits must be authored by %s. Run "
+                    "`git config --local user.name %r && git config --local user.email %r` (or re-run the init "
+                    "skill), then commit again." % (eff, who, name, email))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception:
+        sys.exit(0)

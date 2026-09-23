@@ -1,29 +1,64 @@
 ---
 name: init
 description: >-
-  Explicit entry point for the agentic-agile workflow — start a sprint with two-stage
-  human-gated planning then autonomous, hook-enforced TDD execution. Invoke with
-  /agentic-agile:init. This is a thin alias; the canonical playbook is the
-  agentic-agile skill.
+  Explicit entry point for the agentic-agile workflow — set up the project (limits,
+  models, .gitignore, commit author, whether docs/agents is tracked) with the human's
+  confirmation, then start sprint planning. Invoke with /agentic-agile:init.
 disable-model-invocation: true
 ---
 
 # agentic-agile — init (entry point)
 
-This is the explicit entry point for the **agentic-agile** workflow. It does not
-restate the playbook; it points at the canonical one so the two never drift.
+**Do this now, in order.**
 
-**Do this now:**
+## 1. Project settings — show the defaults, get the human's confirmation
 
-1. Load the canonical supervisor playbook — the `agentic-agile` skill in this plugin.
-   If its full text is not already in your context, read it from this plugin's
-   directory: `${CLAUDE_PLUGIN_ROOT}/skills/agentic-agile/SKILL.md` (run
-   `echo "$CLAUDE_PLUGIN_ROOT"` first if you need the absolute path).
-2. Adopt the supervisor role it defines and begin **Stage-1 planning** with the human:
-   confirm the request, run intake, then standards, then the planner.
-3. Honor every invariant from that playbook — most importantly, **do not start the
-   autonomous RED → SCAFFOLD → GREEN → STRUCTURAL-REVIEW → FINAL-GATE execution run
-   until the human approves the completed Stage-2 plan.**
+Run:
 
-Everything else — the gate contract, artifact layout, transcripts, retrospective — is
-defined in `agentic-agile/SKILL.md`. Follow it as written.
+    agentic-init --show
+
+It prints a table of the proposed settings (the current ones if
+`docs/agents/defaults.md` already exists). Present that table to the human **as is**, then
+ask — with `AskUserQuestion`, one question per topic, the default first:
+
+1. **Limits** — per worker attempt: tokens soft/hard (default 40k / 60k), minutes
+   soft/hard (10 / 15), re-plan cap (2). Keep the defaults, or which values?
+2. **Models** — planning agents `claude-opus-5-5`, workers `sonnet` (the orchestrator
+   runs on `sonnet`). Keep, or which?
+3. **`.gitignore`** — may I add `.agentic/` and `.transcripts/` (run data: transcripts,
+   token ledger, logs — never meant for GitHub)? Default **yes**.
+4. **Track `docs/agents/` in git?** Default **no** (it is then git-ignored too).
+5. **Commit author** — every commit is authored by *the human*, not Claude: default is the
+   identity `agentic-init --show` detected from git config (name + email). Confirm or
+   give another. And: allow Claude co-author / "Generated with Claude Code" trailers?
+   Default **no**.
+
+Do not assume answers and do not skip a question because a default exists — the point is
+that the human sees and confirms them.
+
+## 2. Save them — the harness writes the file, not you
+
+    agentic-init --apply TOKENS_SOFT=… TOKENS_HARD=… TIME_SOFT_MIN=… TIME_HARD_MIN=… \
+      MAX_REPLANS=… MODEL_PLANNING=… MODEL_WORKER=… GITIGNORE=yes|no TRACK_DOCS=no|yes \
+      COMMIT_AUTHOR_NAME="…" COMMIT_AUTHOR_EMAIL="…" CLAUDE_COAUTHOR=no|yes
+
+This writes `docs/agents/defaults.md` (never hand-edit it — a hook blocks that), applies
+the `.gitignore` lines, and sets the repo's local `git config user.name/email` to the
+confirmed author. From then on:
+- the time-box hooks read the limits from it;
+- `gate-commit-author` blocks any commit with another author or a Claude trailer (unless
+  allowed);
+- the SessionStart hook re-applies the `.gitignore` lines every session.
+
+If `--show` reported that `docs/agents/` is already tracked and the human chose not to
+track it, ask before running `git rm -r --cached docs/agents` — never run it unasked.
+
+## 3. Start planning
+
+Load the canonical supervisor playbook — the `agentic-agile` skill in this plugin — adopt
+the supervisor role and begin **Stage-1 planning** with the human (retrospective → intake →
+standards → planner). Do **not** start the autonomous RED → SCAFFOLD → GREEN →
+STRUCTURAL-REVIEW → FINAL-GATE run until the human approves the completed Stage-2 plan.
+
+If `docs/agents/NEXT.md` exists, the previous sprint closed and this is a resume: the
+SessionStart hook has already loaded it — follow its "Do this now" section.

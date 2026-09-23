@@ -1,7 +1,7 @@
 ---
 name: archivist
 description: "Planning retrospective (read-only, every session): reads the transcripts and the failure/feedback trail and distills terse, role-scoped, recurrence-gated memories. Fixes nothing; never relaxes an invariant."
-model: claude-opus-5-5   # planning default (Opus 5.5); per-project override: docs/agents/agentic.conf
+model: claude-opus-5-5   # planning default (Opus 5.5); per-project override: docs/agents/defaults.md
 # reflective, not corrective: allowlist omits Edit/MultiEdit. Bash/Write can still touch files, so
 # gate-memory — not this allowlist — is the real enforcement that it never relaxes an invariant.
 tools: Read, Grep, Glob, Bash, Write

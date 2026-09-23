@@ -1,0 +1,408 @@
+#!/usr/bin/env python3
+"""stats — token ledger, sprint statistics and the orchestrator handoff, all by the harness.
+
+Nothing here is computed or written by a model:
+
+  stats hook                  Stop + SubagentStop (every session): re-read this session's
+                              transcripts (main + every sub-agent) and rewrite
+                              .agentic/ledger/<session_id>.jsonl — one row per API message
+                              (tokens in / cache read / cache write / out, model, agent).
+                              On the main Stop after a sprint closed, it hands the human the
+                              totals (systemMessage) and tells the supervisor to stop and
+                              ask for /clear (decision: block, once).
+  stats sprint-close [DIR]    run by gate-final when FINAL-GATE passes: writes
+                              docs/agents/sprintN/stats.md, docs/agents/NEXT.md (the
+                              handoff the SessionStart hook loads after /clear), records the
+                              close in .agentic/state/sprints.json.
+  stats show                  totals: this session, every sprint, the whole project.
+
+Token figures are summed from the API usage Claude Code records in its transcripts:
+input (uncached) + cache read + cache write + output. `/usage` resets on /clear; this
+ledger does not — it keeps every session of the project.
+"""
+import datetime
+import glob
+import json
+import os
+import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import _paths  # noqa: E402
+
+WORKERS = ("red-worker", "scaffolder", "green-worker")
+
+
+def now_iso():
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def fmt(n):
+    n = n or 0
+    if n >= 1_000_000:
+        return "%.2fM" % (n / 1e6)
+    if n >= 1000:
+        return "%.1fk" % (n / 1e3)
+    return str(n)
+
+
+def read_jsonl(path):
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        yield json.loads(line)
+                    except ValueError:
+                        continue
+    except OSError:
+        return
+
+
+# ── ledger ────────────────────────────────────────────────────────────
+def transcript_rows(path, agent, agent_type):
+    """One row per assistant message (streamed duplicates collapse: last usage wins)."""
+    by_id = {}
+    for rec in read_jsonl(path):
+        msg = rec.get("message")
+        if not isinstance(msg, dict) or not msg.get("usage"):
+            continue
+        u = msg["usage"]
+        mid = msg.get("id") or rec.get("uuid")
+        by_id[mid] = {
+            "ts": rec.get("timestamp") or "", "agent": agent, "agent_type": agent_type,
+            "model": msg.get("model") or "", "in": u.get("input_tokens") or 0,
+            "cache_read": u.get("cache_read_input_tokens") or 0,
+            "cache_write": u.get("cache_creation_input_tokens") or 0, "out": u.get("output_tokens") or 0,
+        }
+    return list(by_id.values())
+
+
+def update_ledger(payload):
+    tp = payload.get("transcript_path") or ""
+    sid = payload.get("session_id") or (os.path.basename(tp)[:-6] if tp.endswith(".jsonl") else "")
+    if not (tp and sid and os.path.isfile(tp)):
+        return None
+    cwd = payload.get("cwd") or os.getcwd()
+    rows = transcript_rows(tp, "main", "supervisor")
+    for sub in sorted(glob.glob(os.path.join(tp[:-6], "subagents", "agent-*.jsonl"))):
+        aid = os.path.basename(sub)[len("agent-"):-len(".jsonl")]
+        atype = ""
+        try:
+            with open(sub[:-len(".jsonl")] + ".meta.json") as f:
+                atype = json.load(f).get("agentType") or ""
+        except (OSError, ValueError):
+            pass
+        rows += transcript_rows(sub, aid, atype.split(":")[-1])
+    for r in rows:
+        r["session"] = sid
+    out = os.path.join(_paths.home(cwd, "ledger"), "%s.jsonl" % re.sub(r"[^A-Za-z0-9_.-]", "_", sid))
+    tmp = out + ".tmp"
+    with open(tmp, "w") as f:
+        for r in sorted(rows, key=lambda r: r["ts"]):
+            f.write(json.dumps(r) + "\n")
+    os.replace(tmp, out)
+    return sid
+
+
+def ledger_rows(cwd, session=None):
+    pat = "%s.jsonl" % session if session else "*.jsonl"
+    for p in glob.glob(os.path.join(_paths.home(cwd, "ledger"), pat)):
+        yield from read_jsonl(p)
+
+
+def total(rows, since=None, until=None):
+    t = {"in": 0, "cache_read": 0, "cache_write": 0, "out": 0, "messages": 0, "by_role": {}, "by_model": {}}
+    for r in rows:
+        if since and r["ts"] <= since:
+            continue
+        if until and r["ts"] > until:
+            continue
+        s = r["in"] + r["cache_read"] + r["cache_write"] + r["out"]
+        for k in ("in", "cache_read", "cache_write", "out"):
+            t[k] += r[k]
+        t["messages"] += 1
+        role = r.get("agent_type") or "?"
+        t["by_role"][role] = t["by_role"].get(role, 0) + s
+        t["by_model"][r["model"] or "?"] = t["by_model"].get(r["model"] or "?", 0) + s
+    t["total"] = t["in"] + t["cache_read"] + t["cache_write"] + t["out"]
+    return t
+
+
+def tok_line(t):
+    return "%s total (in %s · cache read %s · cache write %s · out %s; %d API calls)" % (
+        fmt(t["total"]), fmt(t["in"]), fmt(t["cache_read"]), fmt(t["cache_write"]), fmt(t["out"]), t["messages"])
+
+
+def human_prompts(cwd, since=None, until=None):
+    n = 0
+    for e in read_jsonl(os.path.join(_paths.home(cwd, "transcripts"), "global.jsonl")):
+        if e.get("event") == "prompt" and (not since or e.get("ts", "") > since) and (not until or e.get("ts", "") <= until):
+            n += 1
+    return n
+
+
+# ── sprint state ──────────────────────────────────────────────────────
+def sprints_file(cwd):
+    return os.path.join(_paths.home(cwd, "state"), "sprints.json")
+
+
+def load_sprints(cwd):
+    try:
+        with open(sprints_file(cwd)) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"closed": []}
+
+
+def sprint_num(d):
+    m = re.search(r"sprint(\d+)$", d.rstrip("/"))
+    return int(m.group(1)) if m else None
+
+
+def resolve_sprint_dir(cwd, arg=None):
+    if arg and os.path.isdir(arg):
+        return os.path.abspath(arg)
+    sd = os.environ.get("STORY_DIR")
+    if sd and sprint_num(os.path.dirname(sd.rstrip("/"))) is not None:
+        return os.path.dirname(sd.rstrip("/"))
+    dirs = [d for d in glob.glob(os.path.join(_paths.docs(cwd), "sprint*")) if sprint_num(d) is not None]
+    return max(dirs, key=sprint_num) if dirs else None
+
+
+def sprint_facts(cwd, sdir, since, until):
+    """Everything countable about one sprint, from files the harness owns."""
+    f = {"stories": 0, "tasks_planned": 0, "boxes": 0, "ticked": 0, "attempts": {}, "killed": [],
+         "attempt_tokens": 0, "gate_pass": {}, "gate_block": {}, "replans": 0, "kills_logged": 0,
+         "first": None, "last": None}
+    for story in sorted(glob.glob(os.path.join(sdir, "s[0-9]*-[0-9]*-*"))):
+        if not os.path.isdir(story):
+            continue
+        f["stories"] += 1
+        try:
+            f["tasks_planned"] += len(re.findall(r"(?m)^##\s+T\d+", open(os.path.join(story, "tasks.md")).read()))
+        except OSError:
+            pass
+        try:
+            pr = open(os.path.join(story, "plan-ready.md")).read()
+            f["ticked"] += len(re.findall(r"(?m)^\s*- \[[xX]\]", pr))
+            f["boxes"] += len(re.findall(r"(?m)^\s*- \[[ xX]\]", pr))
+        except OSError:
+            pass
+    for p in glob.glob(os.path.join(_paths.home(cwd, "budget"), "*.json")):
+        try:
+            s = json.load(open(p))
+        except (OSError, ValueError):
+            continue
+        if not (s.get("story_dir") or "").startswith(sdir):
+            continue
+        f["attempts"][s["role"]] = f["attempts"].get(s["role"], 0) + 1
+        f["attempt_tokens"] += s.get("tokens") or 0
+        if s.get("hook_killed") or s.get("killed"):
+            f["killed"].append("%s %s (%s, %s tokens, %.1f min)" % (s.get("task") or "?", s["role"], s.get("attempt") or "?",
+                                                                    fmt(s.get("tokens")), s.get("elapsed_min") or 0))
+    for g in read_jsonl(os.path.join(_paths.home(cwd, "logs"), "gates.jsonl")):
+        if g.get("selfcheck"):
+            continue
+        mine = (g.get("story_dir") or "").startswith(sdir) or (not g.get("story_dir") and since < g.get("ts", "") <= until)
+        if not mine:
+            continue
+        bucket = "gate_pass" if g.get("exit") == 0 else "gate_block"
+        f[bucket][g["gate"]] = f[bucket].get(g["gate"], 0) + 1
+    try:
+        for line in open(os.path.join(sdir, "execution.log")):
+            w = line.split()
+            if not w:
+                continue
+            f["first"] = f["first"] or w[0]
+            f["last"] = w[0]
+            if len(w) > 2 and w[2] == "replan" and "start" in w:
+                f["replans"] += 1
+            if len(w) > 2 and w[2] == "budget":
+                f["kills_logged"] += 1
+    except OSError:
+        pass
+    return f
+
+
+def section(text, title):
+    m = re.search(r"(?ms)^#+\s*%s\s*$(.*?)(?=^#+\s|\Z)" % re.escape(title), text)
+    return m.group(1).strip() if m else ""
+
+
+def render_stats(n, sdir, facts, sprint_t, session_t, project_t, prompts, closed_at):
+    a = facts["attempts"]
+    lines = ["---", "type: sprint-stats", "sprint: %d" % n, "closed_at: %s" % closed_at, "---",
+             "# Sprint %d — stats (written by the harness at FINAL-GATE pass)" % n, "",
+             "| Metric | Value |", "|---|---|",
+             "| Stories | %d |" % facts["stories"],
+             "| Tasks planned | %d |" % facts["tasks_planned"],
+             "| plan-ready boxes ticked | %d / %d |" % (facts["ticked"], facts["boxes"]),
+             "| Worker attempts | %s |" % (", ".join("%s %d" % (r, a[r]) for r in sorted(a)) or "0"),
+             "| Gate passes | %s |" % (", ".join("%s %d" % kv for kv in sorted(facts["gate_pass"].items())) or "0"),
+             "| Gate blocks (retries triggered) | %s |" % (", ".join("%s %d" % kv for kv in sorted(facts["gate_block"].items())) or "0"),
+             "| Attempts stopped at hard budget | %d |" % len(facts["killed"]),
+             "| Mid-sprint re-plans | %d |" % facts["replans"],
+             "| Human messages | %d |" % prompts,
+             "| Execution window | %s → %s |" % (facts["first"] or "?", facts["last"] or "?"),
+             "", "## Tokens", "",
+             "- **This sprint:** %s" % tok_line(sprint_t),
+             "- **This session:** %s" % tok_line(session_t),
+             "- **Whole project:** %s" % tok_line(project_t),
+             "- Sprint by role: %s" % (", ".join("%s %s" % (k, fmt(v)) for k, v in sorted(sprint_t["by_role"].items(), key=lambda kv: -kv[1])) or "-"),
+             "- Sprint by model: %s" % (", ".join("%s %s" % (k, fmt(v)) for k, v in sorted(sprint_t["by_model"].items(), key=lambda kv: -kv[1])) or "-"),
+             ""]
+    if facts["killed"]:
+        lines += ["## Stopped at the hard budget", ""] + ["- " + k for k in facts["killed"]] + [""]
+    return "\n".join(lines)
+
+
+def render_next(n, sdir, facts, sprint_t, project_t, prompts, closed, closed_at):
+    try:
+        stories = open(os.path.join(sdir, "stories.md")).read()
+    except OSError:
+        stories = ""
+    goal = section(stories, "Sprint goal").splitlines()[0:3]
+    carry = section(stories, "Out of scope") or "(none recorded)"
+    rel = os.path.relpath(sdir, _paths.project(sdir))
+    lines = [
+        "---", "type: agentic-handoff", "last_sprint: %d" % n, "closed_at: %s" % closed_at, "---",
+        "# agentic-agile — orchestrator handoff",
+        "",
+        "_Written by the harness when sprint %d's FINAL-GATE passed; loaded into your context by the"
+        " SessionStart hook after `/clear`. Nothing from the previous conversation carries over —"
+        " everything you need is on disk._" % n,
+        "",
+        "## You are the supervisor. Do this now",
+        "1. Load the `agentic-agile` skill and follow it exactly (planning is human-gated;"
+        " execution is autonomous; you never write code or planning artifacts yourself).",
+        "2. Project settings — limits, models, commit author — are in `docs/agents/defaults.md`."
+        " Never change them without the human (re-run the init skill).",
+        "3. **Next: plan sprint %d.** Step 0 retrospective (`archivist`) over sprint %d's transcripts,"
+        " then `intake` → `standards` → `planner`, with the human. Keep the sprint self-contained."
+        " Do not start execution until the human says go." % (n + 1, n),
+        "4. Candidate scope: sprint %d's carry-over below, plus whatever the human asks for." % n,
+        "",
+        "## Where we are",
+        "- Sprints closed: %s" % (", ".join("%d (%s)" % (c["sprint"], c["at"][:10]) for c in closed) or str(n)),
+        "- Sprint %d goal: %s" % (n, " ".join(l.strip() for l in goal) or "(see %s/stories.md)" % rel),
+        "- Sprint %d: %d stories, %d tasks planned, %d/%d plan boxes ticked, %d re-plans, %d attempts stopped at hard budget."
+        % (n, facts["stories"], facts["tasks_planned"], facts["ticked"], facts["boxes"], facts["replans"], len(facts["killed"])),
+        "- Full stats: `%s/stats.md` · execution log: `%s/execution.log`" % (rel, rel),
+        "",
+        "## Carried over from sprint %d (its \"Out of scope\")" % n,
+        carry,
+        "",
+        "## Totals so far",
+        "- Sprint %d tokens: %s" % (n, tok_line(sprint_t)),
+        "- Project tokens (all sessions): %s" % tok_line(project_t),
+        "- Human messages in sprint %d: %d" % (n, prompts),
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def sprint_close(cwd, arg=None):
+    sdir = resolve_sprint_dir(cwd, arg)
+    if not sdir:
+        print("stats: no docs/agents/sprintN dir found", file=sys.stderr)
+        return 1
+    n = sprint_num(sdir)
+    st = load_sprints(cwd)
+    closed = [c for c in st["closed"] if c["sprint"] != n]
+    since = max((c["at"] for c in closed), default="")
+    at = now_iso()
+    rows = list(ledger_rows(cwd))
+    sprint_t = total(rows, since or None, at)
+    project_t = total(rows)
+    sessions = sorted(glob.glob(os.path.join(_paths.home(cwd, "ledger"), "*.jsonl")), key=os.path.getmtime)
+    session_t = total(read_jsonl(sessions[-1])) if sessions else total([])
+    prompts = human_prompts(cwd, since or None, at)
+    facts = sprint_facts(cwd, sdir, since, at)
+    closed.append({"sprint": n, "at": at, "dir": sdir})
+    closed.sort(key=lambda c: c["sprint"])
+    with open(os.path.join(sdir, "stats.md"), "w") as f:
+        f.write(render_stats(n, sdir, facts, sprint_t, session_t, project_t, prompts, at))
+    with open(_paths.next_file(cwd), "w") as f:
+        f.write(render_next(n, sdir, facts, sprint_t, project_t, prompts, closed, at))
+    with open(sprints_file(cwd), "w") as f:
+        json.dump({"closed": closed}, f, indent=1)
+    summary = ("Sprint %d closed. Tokens — sprint: %s · this session: %s · project: %s. Tasks planned %d, "
+               "boxes ticked %d/%d, attempts stopped at budget %d, re-plans %d, human messages %d. "
+               "Stats: %s/stats.md · handoff: docs/agents/NEXT.md"
+               % (n, fmt(sprint_t["total"]), fmt(session_t["total"]), fmt(project_t["total"]), facts["tasks_planned"],
+                  facts["ticked"], facts["boxes"], len(facts["killed"]), facts["replans"], prompts,
+                  os.path.relpath(sdir, _paths.project(cwd))))
+    with open(os.path.join(_paths.home(cwd, "state"), "pending-close"), "w") as f:
+        f.write(summary + "\n")
+    print(summary)
+    return 0
+
+
+def hook():
+    if os.environ.get("SKIP_HOOKS") == "1":
+        return 0
+    try:
+        payload = json.loads(sys.stdin.read() or "{}")
+    except ValueError:
+        return 0
+    cwd = payload.get("cwd") or os.getcwd()
+    if not os.path.isdir(_paths.docs(cwd)):
+        return 0                                    # not an agentic-agile project: write nothing
+    try:
+        update_ledger(payload)
+    except Exception:
+        pass
+    if payload.get("hook_event_name") != "Stop":
+        return 0
+    marker = os.path.join(_paths.home(cwd, "state"), "pending-close")
+    if not os.path.isfile(marker):
+        return 0
+    summary = open(marker).read().strip()
+    os.remove(marker)                               # announce exactly once
+    print(json.dumps({
+        "systemMessage": "agentic-agile: " + summary,
+        "decision": "block",
+        "reason": ("[agentic-agile harness] " + summary + " The sprint is finished. Report these totals to the "
+                   "human, then tell them: run /clear — docs/agents/NEXT.md (the handoff) is loaded "
+                   "automatically into the fresh context. Do not start the next sprint in this context."),
+    }))
+    return 0
+
+
+def show(cwd):
+    rows = list(ledger_rows(cwd))
+    sessions = sorted(glob.glob(os.path.join(_paths.home(cwd, "ledger"), "*.jsonl")), key=os.path.getmtime)
+    if sessions:
+        print("This session : %s" % tok_line(total(read_jsonl(sessions[-1]))))
+    prev = ""
+    for c in load_sprints(cwd)["closed"]:
+        print("Sprint %-5d : %s" % (c["sprint"], tok_line(total(rows, prev or None, c["at"]))))
+        prev = c["at"]
+    if prev:
+        print("Since last   : %s" % tok_line(total(rows, prev)))
+    print("Project      : %s  across %d session(s); %d human messages" % (tok_line(total(rows)), len(sessions), human_prompts(cwd)))
+    return 0
+
+
+def main(argv):
+    cmd = argv[0] if argv else "--help"
+    if cmd in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return 0
+    if cmd == "hook":
+        try:
+            return hook()
+        except Exception:
+            return 0
+    if cmd == "sprint-close":
+        return sprint_close(os.getcwd(), argv[1] if len(argv) > 1 else None)
+    if cmd == "show":
+        return show(os.getcwd())
+    print("stats: unknown command %r" % cmd, file=sys.stderr)
+    return 64
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

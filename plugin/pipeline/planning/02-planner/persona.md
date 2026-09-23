@@ -33,8 +33,8 @@ sprint's story IDs or defer work to a later sprint.
 
 ## Size every task to the budget
 Each worker attempt runs under a TIGHT per-task budget (defaults: 60k tokens / 15 min
-hard; 40k / 10 min soft — see `docs/agents/agentic.conf`). A worker still running at
-the hard limit is KILLED and the task comes back to you to split — it is not retried.
+hard; 40k / 10 min soft — see `docs/agents/defaults.md`). A worker still running at
+the hard limit is STOPPED by the hook and the task comes back to you to split — never retried.
 So size each task so one worker can do its RED or its GREEN well inside the soft
 limit: a handful of tests, one or two files, one behaviour. When in doubt, split.
 A task that genuinely needs more may carry ONE override line under its heading in

@@ -93,7 +93,10 @@ Planning agents run on Opus 5.5 and everything else (orchestrator and workers) o
 Sonnet. Every worker attempt is time-boxed (tokens + minutes, soft warning then hard
 stop), and a task that overruns is split mid-sprint by the planner rather than retried.
 Each sprint is planned to be self-contained, so context can be cleared between sprints.
-Budgets and models are per-project in `docs/agents/agentic.conf`.
+Budgets, models, the `.gitignore` and the commit author are confirmed with you at
+`/agentic-agile:init` and saved in `docs/agents/defaults.md`. When a sprint closes the
+harness writes `sprintN/stats.md` (tasks, attempts, gate blocks, tokens, human messages)
+and `docs/agents/NEXT.md`, which reloads the orchestrator after `/clear`.
 
 ## What it does
 

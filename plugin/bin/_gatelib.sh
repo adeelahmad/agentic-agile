@@ -28,6 +28,21 @@ GATELIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 have_tool() { "$GATELIB_DIR/ensure-tools" --resolve "$1" >/dev/null 2>&1; }
 export PATH="$GATELIB_DIR:$PATH"   # bare `md-db`/`ctx-symbols` -> shim -> real binary
 
+# shellcheck source=/dev/null
+. "$GATELIB_DIR/_paths.sh"
+
+# Every verdict is logged (pass AND block) to .agentic/logs/gates.jsonl — the sprint
+# stats count attempts/failures from here, not from anything a model wrote.
+_gate_log_verdict() {
+  local rc=$?
+  mkdir -p "$AGENTIC_LOGS" 2>/dev/null || return 0
+  printf '{"ts":"%s","gate":"%s","role":"%s","task":"%s","attempt":"%s","story_dir":"%s","exit":%d,"selfcheck":%s}\n' \
+    "$(date -u +%FT%TZ)" "${GATE_NAME:-?}" "${AGENT_ROLE:-}" "${TASK_ID:-}" "${ATTEMPT:-}" "${STORY_DIR:-}" \
+    "$rc" "$([ "${AGENTIC_SELFCHECK:-}" = 1 ] && echo true || echo false)" >> "$AGENTIC_LOGS/gates.jsonl" 2>/dev/null
+  return "$rc"
+}
+trap _gate_log_verdict EXIT
+
 warn() { echo "WARN[$GATE_NAME]: $*" >&2; }
 fail() { echo "BLOCK[$GATE_NAME]: $*" >&2; exit 2; }
 note() { echo "[$GATE_NAME] $*" >&2; }

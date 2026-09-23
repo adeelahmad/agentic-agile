@@ -12,7 +12,9 @@ Transcripts hooks (`transcripts`) ALWAYS exit `0` — they must never block an a
 ## Per-task contract
 Gates read `.agentic/task.env` (the supervisor writes it into each worktree at
 dispatch): `TASK_ID, ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF,
-STORY_DIR, AGENTIC_TRANSCRIPTS_DIR`. Real env overrides. A missing backend (md-db /
+STORY_DIR, BUDGET_*`. Real env overrides. Store paths are NOT part of the contract:
+`_paths.sh` / `_paths.py` fix them (`<main tree>/.agentic/{transcripts,budget,ledger,logs,state}`,
+`docs/agents/{defaults.md,NEXT.md}`). A missing backend (md-db /
 ctx-symbols) → WARN + grep fallback; never a silent pass.
 
 ## Gates (which hook fires each)
@@ -41,7 +43,11 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 | `log-execution` | append a transition line to `execution.log` |
 | `ensure-tools` | SessionStart — builds md-db + ctx-symbols into `$CLAUDE_PLUGIN_DATA/bin` on first run / version change (background), tells the model where the tools are. `--sync` build now · `--wait` · `--resolve T` real binary path |
 | `md-db`, `ctx-symbols` | PATH shims (this `bin/` is on PATH in every session): exec the real binary, building it once if needed. Gates test presence with `ensure-tools --resolve`, never `command -v` |
-| `budget` | per-attempt time box for red/scaffolder/green workers. `hook pre\|post\|stop` (PreToolUse/PostToolUse `*`, SubagentStop): soft limit → warning in the worker's tool result; hard limit → deny tools except the output.md report + `.agentic/budget-exceeded` (the worker gate then releases the stop, unverified). `resolve` · `watch` (supervisor sleep; exits with KILL lines) · `status` · `mark-killed` · `replans` (split cap) |
+| `agentic-init` | project setup: `--show` the defaults for the human, `--apply KEY=VALUE…` writes `docs/agents/defaults.md`, the managed `.gitignore` lines and the repo-local git author; `--ensure-gitignore` (SessionStart, worktree-hygiene) re-adds them |
+| `session-start` | SessionStart — re-applies the managed `.gitignore` lines (if init opted in) and loads `docs/agents/NEXT.md` into the context (the post-`/clear` handoff) |
+| `gate-commit-author` | PreToolUse · Bash — a `git commit` must use the configured author: denies `--author`/`-c user.*`/`GIT_AUTHOR_*` overrides, a mismatched repo identity, and Claude co-author/attribution trailers (unless `CLAUDE_COAUTHOR=yes`) |
+| `stats` | `hook` (Stop + SubagentStop): rewrites `.agentic/ledger/<session>.jsonl` from the transcripts (tokens per API call, main + sub-agents) and, once after a sprint closed, shows the totals + tells the supervisor to ask for `/clear`. `sprint-close` (run by gate-final on pass): `sprintN/stats.md` + `NEXT.md`. `show`: session / sprint / project totals |
+| `budget` | per-attempt time box for red/scaffolder/green workers. `hook pre\|post\|stop` (PreToolUse/PostToolUse `*`, SubagentStop): soft limit → warning in the worker's tool result; hard limit → one chance to write the output.md report, 3 refused calls, then PostToolUse `continue: false` stops the worker (+ `.agentic/budget-exceeded`, so its gate releases the stop unverified). `resolve` · `watch` (supervisor sleep; exits with KILL lines) · `status` · `mark-killed` · `replans` (split cap) |
 
 ## v0.2 — self-check at every step
 

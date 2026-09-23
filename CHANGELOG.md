@@ -34,8 +34,8 @@ tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
   40k tokens / 10 min) warn the worker inside its tool results; hard limits (60k / 15
   min) deny further tool calls except the output.md report, release the worker's
   SubagentStop gate unverified, and surface a KILL to the supervisor via `budget watch`.
-  Configurable per project (`docs/agents/agentic.conf`, template in
-  `templates/agentic.conf`) and per task (`budget:` line in tasks.md).
+  Configurable per project (`docs/agents/defaults.md`, via init) and per task
+  (`budget:` line in tasks.md).
 - **Orchestrator loop: dispatch → sleep → sweep.** The supervisor dispatches background
   workers, sleeps on `budget watch`, then `TaskStop`s workers past their hard limit.
 - **Mid-sprint re-plan route.** A task killed at its hard limit is not retried: the
@@ -47,12 +47,40 @@ tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 - **Self-contained sprints.** The planner prompt requires every sprint to be completable
   on its own (context is cleared between sprints); `gate-stage2-complete` blocks
   references to a later sprint's stories and work deferred into a later sprint. The
-  supervisor asks the human to `/clear` at each sprint boundary.
+  harness asks for `/clear` at each sprint boundary.
+
+- **Init confirms the project setup with the human.** `/agentic-agile:init` runs
+  `agentic-init --show` (limits, models, the `.gitignore` edit, whether `docs/agents/` is
+  tracked — default no — and the commit author — default the human's git identity, no
+  Claude trailers), asks, then `agentic-init --apply` writes `docs/agents/defaults.md`,
+  the managed `.gitignore` lines and the repo-local git author. The hooks read limits
+  from that file; the SessionStart hook re-applies the `.gitignore` lines every session.
+- **`gate-commit-author`** (PreToolUse · Bash): denies commits with another author,
+  identity overrides, or Claude co-author/attribution trailers (unless opted in).
+- **One fixed layout** (`bin/_paths.sh` / `_paths.py`): run data lives only in
+  `<project>/.agentic/{transcripts,budget,ledger,logs,state}`; no model-chosen or
+  per-worktree path, no task.env override. Capture hooks write nothing in a repo that
+  isn't an agentic-agile project.
+- **Token ledger + sprint stats + handoff, by the harness** (`bin/stats`): Stop and
+  SubagentStop rebuild `.agentic/ledger/<session>.jsonl` from the transcripts (main +
+  sub-agents). When FINAL-GATE passes, `gate-final` runs `stats sprint-close`:
+  `sprintN/stats.md` (tasks, attempts, gate passes/blocks, budget stops, re-plans,
+  tokens per sprint/session/project, by role and model, human messages) and
+  `docs/agents/NEXT.md` (orchestrator handoff). The next Stop shows the human the totals
+  and asks for `/clear`; the SessionStart hook loads `NEXT.md` into the fresh context.
+  `stats show` prints totals any time. Every gate verdict is logged to
+  `.agentic/logs/gates.jsonl`.
 
 ### Changed
+- **The hard-limit kill is deterministic:** after one chance to write its report and 3
+  refused calls, the time-box hook stops the worker itself (PostToolUse
+  `continue: false`); `budget watch` reports `STOPPED`, with `TaskStop` only a backstop.
+- `gate-final` also checks `plan-ready.md` in the sprint's main-tree docs (a worker
+  worktree has `docs/agents/` sparse-checked out).
+- The supervisor may not hand-edit `defaults.md`, `NEXT.md` or `stats.md`.
 - **Models:** planning agents (intake, standards, planner, archivist) default to
   `claude-opus-5-5`; execution agents and the orchestrator skill default to `sonnet`.
-  Per-project override via `AGENTIC_MODEL_PLANNING` / `AGENTIC_MODEL_WORKER`.
+  Per-project override via `AGENTIC_MODEL_PLANNING` / `AGENTIC_MODEL_WORKER` in defaults.md.
 - Gates detect backends with `ensure-tools --resolve` (the real binary), not
   `command -v` (which would now find the shim).
 

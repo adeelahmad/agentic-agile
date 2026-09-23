@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# session-start — SessionStart hook (startup · resume · clear · compact). Deterministic:
+#   1. re-applies the project's managed .gitignore lines (only if init opted in), so run
+#      data (.agentic/) and — by default — docs/agents/ can never leak into a commit;
+#   2. loads docs/agents/NEXT.md — the orchestrator handoff the harness wrote when the last
+#      sprint closed — into the fresh context. This is how the supervisor resumes after
+#      /clear: from the file, not from memory.
+# Never blocks (always exit 0).
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+payload="$([ -t 0 ] || cat 2>/dev/null || true)"
+cwd="$(printf '%s' "$payload" | sed -nE 's/.*"cwd"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -1)"
+if [ -n "$cwd" ] && [ -d "$cwd" ]; then cd "$cwd" || exit 0; fi
+# shellcheck source=/dev/null
+. "$HERE/_paths.sh"
+
+"$HERE/agentic-init" --ensure-gitignore >/dev/null 2>&1 || true
+
+[ -f "$AGENTIC_NEXT" ] || exit 0
+ctx="agentic-agile handoff — docs/agents/NEXT.md, loaded automatically by the SessionStart hook:
+
+$(head -c 12000 "$AGENTIC_NEXT")"
+if command -v python3 >/dev/null 2>&1; then
+  CTX="$ctx" python3 -c 'import json,os;print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":os.environ["CTX"]}}))'
+else
+  printf '%s\n' "$ctx"
+fi
+exit 0

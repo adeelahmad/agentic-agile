@@ -16,7 +16,7 @@ each with a SOFT and a HARD limit:
                    to be split (SKILL.md "Budget overrun -> mid-sprint re-plan").
 
 Resolution order (first set wins):  per-task `budget:` line in tasks.md  >
-    BUDGET_* in the worktree's .agentic/task.env  >  docs/agents/agentic.conf  >  defaults.
+    BUDGET_* in the worktree's .agentic/task.env  >  docs/agents/defaults.md  >  built-ins.
 
 Usage:
   budget resolve [--tasks FILE --task Tn]   print the resolved BUDGET_* lines (for task.env)
@@ -40,15 +40,12 @@ import subprocess
 import sys
 import time
 
-DEFAULTS = {
-    "TOKENS_SOFT": 40000,
-    "TOKENS_HARD": 60000,
-    "TIME_SOFT_MIN": 10,
-    "TIME_HARD_MIN": 15,
-    "MAX_REPLANS": 2,
-}
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import _paths  # noqa: E402  (the one file-layout definition)
+
+BUDGET_KEYS = ("TOKENS_SOFT", "TOKENS_HARD", "TIME_SOFT_MIN", "TIME_HARD_MIN", "MAX_REPLANS")
 WORKERS = ("red-worker", "scaffolder", "green-worker")
-CONF_KEY = re.compile(r"^\s*(?:export\s+)?AGENTIC_([A-Z_]+)\s*=\s*['\"]?([^'\"#\s]*)")
+GRACE_DENIALS = 3          # at the hard limit: denied non-report calls before the forced stop
 TASK_BUDGET = re.compile(r"^\s*budget:\s*(.+)$", re.I)
 
 
@@ -61,18 +58,11 @@ def sh(*args, cwd=None):
 
 
 def main_tree(cwd):
-    """The MAIN worktree (first entry of `git worktree list`), else cwd's toplevel."""
-    out = sh("git", "-C", cwd or ".", "worktree", "list", "--porcelain")
-    for line in out.splitlines():
-        if line.startswith("worktree "):
-            return line[len("worktree "):]
-    return sh("git", "-C", cwd or ".", "rev-parse", "--show-toplevel") or (cwd or os.getcwd())
+    return _paths.project(cwd)
 
 
 def state_dir(cwd):
-    d = os.environ.get("AGENTIC_STATE_DIR") or os.path.join(main_tree(cwd), "docs", "agents", ".agentic", "budget")
-    os.makedirs(d, exist_ok=True)
-    return d
+    return _paths.home(cwd, "budget")
 
 
 def read_kv(path):
@@ -89,18 +79,9 @@ def read_kv(path):
 
 
 def conf_values(cwd):
-    """docs/agents/agentic.conf — parsed as KEY=VALUE, never executed."""
-    path = os.environ.get("AGENTIC_CONF") or os.path.join(main_tree(cwd), "docs", "agents", "agentic.conf")
-    vals = {}
-    try:
-        with open(path) as f:
-            for line in f:
-                m = CONF_KEY.match(line)
-                if m and m.group(1) in DEFAULTS and m.group(2).isdigit():
-                    vals[m.group(1)] = int(m.group(2))
-    except OSError:
-        pass
-    return vals
+    """docs/agents/defaults.md (written by agentic-init) — parsed, never executed."""
+    st = _paths.settings(cwd)
+    return {k: st[k] for k in BUDGET_KEYS}
 
 
 def task_override(tasks_file, task):
@@ -123,9 +104,8 @@ def task_override(tasks_file, task):
 
 
 def resolve(cwd, tasks_file=None, task=None, task_env=None):
-    b = dict(DEFAULTS)
-    b.update(conf_values(cwd))
-    for k in list(DEFAULTS):
+    b = conf_values(cwd)
+    for k in BUDGET_KEYS:
         v = (task_env or {}).get("BUDGET_" + k)
         if v and v.isdigit():
             b[k] = int(v)
@@ -197,8 +177,11 @@ def save_state(path, st):
 
 
 # ── hook mode ─────────────────────────────────────────────────────────
-def emit(event, context=None, deny=None):
+def emit(event, context=None, deny=None, stop=None):
     out = {"hookSpecificOutput": {"hookEventName": event}}
+    if stop:                       # PostToolUse `continue: false` ends the sub-agent (verified)
+        out["continue"] = False
+        out["stopReason"] = stop
     if context:
         out["hookSpecificOutput"]["additionalContext"] = context
     if deny:
@@ -249,7 +232,7 @@ def hook(mode):
         st = {"agent_id": agent_id, "role": role, "task": task, "attempt": env.get("ATTEMPT", ""),
               "worktree": top, "story_dir": env.get("STORY_DIR", ""), "start": now, "budget": b,
               "soft_warned": False, "final_warned": False, "hard": False, "done": None}
-    if st.get("done") and not st.get("killed"):
+    if st.get("done") and not st.get("killed") and not st.get("hook_killed"):
         st["done"] = None          # a SubagentStop gate blocked the stop: still working
     b = st["budget"]
     tp = transcript_for(payload, agent_id)
@@ -285,12 +268,28 @@ def hook(mode):
     if st["hard"]:
         msg = ("HARD BUDGET EXCEEDED (%s). You are being stopped. Do ONE thing: append your "
                "`## <task> · attempt N · %s · <ts>` block to %s with `status: re-plan` (budget exceeded), a "
-               "### Summary of what is done and what is left, ### Result, ### Next — then end your "
-               "turn. Do not run tests or edit code. The task goes back to the planner to be split." % (left, role, report))
-        if mode == "pre" and not is_report_write(payload, st):
-            emit("PreToolUse", deny=msg)
-        elif mode == "post":
-            emit("PostToolUse", context=msg)
+               "### Summary of what is done and what is left, ### Result, ### Next — that tool call is "
+               "your last. Do not run tests or edit code. The task goes back to the planner to be split." % (left, role, report))
+        stop = ("agentic-agile: HARD BUDGET — %s %s stopped by the time-box hook (%s). "
+                "Not a pass; the supervisor re-plans this task." % (role, st.get("task") or "", left))
+        just_crossed = st["hard"] == now
+        if mode == "pre":
+            if is_report_write(payload, st):
+                return                                   # the one call we still allow
+            st["denials"] = st.get("denials", 0) + 1
+            save_state(spath, st)
+            if st["denials"] <= GRACE_DENIALS:
+                emit("PreToolUse", deny=msg + " (%d/%d refusals before a forced stop)" % (st["denials"], GRACE_DENIALS))
+            # past the grace: let this call through — its PostToolUse ends the agent
+            return
+        if mode == "post":
+            if just_crossed:                             # first sight: one chance to report
+                emit("PostToolUse", context=msg)
+                return
+            st["hook_killed"] = now
+            st["done"] = now
+            save_state(spath, st)
+            emit("PostToolUse", context=msg, stop=stop)  # deterministic stop, no model decision
         return
 
     if mode != "post":
@@ -337,13 +336,19 @@ def refresh(st):
 
 
 def watch(cwd, interval, grace):
-    """Sleep until some running worker has been past its HARD limit for `grace` seconds
-    (time to append its report) or no worker is running. Run it with run_in_background:
-    its exit is the supervisor's wake-up."""
+    """The supervisor's sleep. Returns when a worker was STOPPED by the time-box hook, a
+    worker is past its HARD limit + grace and still running (the hook's backstop: TaskStop
+    it), or no worker is running. Run with run_in_background: its exit is the wake-up."""
     while True:
         now = time.time()
-        running = [(p, s) for p, s in all_states(cwd) if not s.get("done")]
-        kill = []
+        stopped, kill = [], []
+        states = all_states(cwd)
+        running = [(p, s) for p, s in states if not s.get("done")]
+        for p, s in states:
+            if s.get("hook_killed") and not s.get("reported"):
+                s["reported"] = now
+                save_state(p, s)
+                stopped.append(s)
         for p, s in running:
             if refresh(s):
                 if not s.get("hard"):
@@ -351,14 +356,17 @@ def watch(cwd, interval, grace):
                 save_state(p, s)
                 if now - s["hard"] >= grace:
                     kill.append(s)
-        if kill:
-            for s in kill:
-                print("KILL agent_id=%s task=%s role=%s attempt=%s tokens=%s/%s elapsed=%.1f/%dmin" % (
-                    s["agent_id"], s.get("task") or "?", s["role"], s.get("attempt") or "?",
-                    fmt_k(s.get("tokens")), fmt_k(s["budget"]["TOKENS_HARD"]), s["elapsed_min"],
-                    s["budget"]["TIME_HARD_MIN"]))
-            print("-> TaskStop each KILL agent, then `budget mark-killed <agent_id>`; PAUSE the sprint and "
-                  "dispatch the planner in replan mode (SKILL.md 'Budget overrun'). Do NOT retry these tasks as-is.")
+        line = "%s agent_id=%s task=%s role=%s attempt=%s tokens=%s/%s elapsed=%.1f/%dmin"
+        for tag, group in (("STOPPED", stopped), ("KILL", kill)):
+            for s in group:
+                print(line % (tag, s["agent_id"], s.get("task") or "?", s["role"], s.get("attempt") or "?",
+                              fmt_k(s.get("tokens")), fmt_k(s["budget"]["TOKENS_HARD"]), s.get("elapsed_min") or 0,
+                              s["budget"]["TIME_HARD_MIN"]))
+        if stopped or kill:
+            if kill:
+                print("-> KILL lines: the hook could not stop these — TaskStop each, then `budget mark-killed <agent_id>`.")
+            print("-> Budget overrun: discard these attempts (never merge), PAUSE the sprint and dispatch the "
+                  "planner in replan mode (SKILL.md 'Budget overrun'). Do NOT retry these tasks as-is.")
             return 3
         if not running:
             print("IDLE: no worker running.")

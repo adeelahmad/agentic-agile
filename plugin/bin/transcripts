@@ -23,13 +23,17 @@
 #   transcripts prune                 manual: keep last N events/task (AGENTIC_TRANSCRIPTS_KEEP, default all)
 #
 # Per-worktree contract: the supervisor writes ./.agentic/task.env at dispatch with
-#   TASK_ID, ATTEMPT, AGENT_ROLE, AGENTIC_TRANSCRIPTS_DIR  (real env overrides it).
+#   TASK_ID, ATTEMPT, AGENT_ROLE  (real env overrides it). The store path is fixed (_paths.sh).
 set -uo pipefail
 
 WT="${AGENTIC_WORKTREE:-$PWD}"
 [ -f "$WT/.agentic/task.env" ] && { set -a; . "$WT/.agentic/task.env"; set +a; }
 TASK_ID="${TASK_ID:-session}"
-STORE="${AGENTIC_TRANSCRIPTS_DIR:-$WT/.agentic/transcripts}"
+# THE store location (bin/_paths.sh): <main worktree>/.agentic/transcripts — never a
+# model-chosen or per-worktree path, so every task of every sprint lands in one place.
+# shellcheck source=/dev/null
+AGENTIC_CWD="$WT" . "$(dirname "${BASH_SOURCE[0]}")/_paths.sh"
+STORE="$AGENTIC_TRANSCRIPTS"
 VIEW="$WT/.transcripts"
 GLOBAL="$STORE/global.jsonl"
 TDIR="$STORE/$TASK_ID"
@@ -72,6 +76,9 @@ snapshot_transcript() { # $1 payload
 }
 
 cmd="${1:-}"; shift || true
+# Only capture in an agentic-agile project (docs/agents/ exists): in any other repo the
+# plugin must not create .agentic/ — an un-ignored run-data dir is how transcripts leak.
+case "$cmd" in init|stage-in|record|prompt|snapshot|stop) [ -d "$AGENTIC_DOCS" ] || exit 0 ;; esac
 case "$cmd" in
   -h|--help|help)
     sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
