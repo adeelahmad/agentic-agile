@@ -1,0 +1,248 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1158" width="1600" height="1158" role="img" aria-labelledby="t d">
+<title id="t">agentic-agile — the deterministic sprint loop</title>
+<desc id="d">Init, human-gated planning, an orchestrator that dispatches time-boxed TDD workers in isolated worktrees, hook-enforced gates, final gate with harness-written stats and handoff, clear context, repeat. Runs on Claude Code, Codex and OpenCode.</desc>
+<defs>
+<marker id="ah-9fb0c8" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9fb0c8"/></marker>
+<marker id="ah-34d399" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#34d399"/></marker>
+<marker id="ah-22d3ee" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/></marker>
+<marker id="ah-6b7c96" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7c96"/></marker>
+<marker id="ah-a78bfa" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a78bfa"/></marker>
+<marker id="ah-fbbf24" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#fbbf24"/></marker>
+<marker id="ah-f472b6" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f472b6"/></marker>
+<marker id="ah-60a5fa" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/></marker>
+<marker id="ah-f87171" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f87171"/></marker>
+<linearGradient id="bar" x1="0" x2="1"><stop offset="0" stop-color="#34d399"/><stop offset="0.6" stop-color="#fbbf24"/><stop offset="1" stop-color="#f87171"/></linearGradient>
+</defs>
+<rect x="0" y="0" width="1600" height="1158" rx="0" fill="#0b1220" stroke="#0b1220" stroke-width="0"/>
+<text x="48" y="64" font-size="40" fill="#e6edf7" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">agentic-agile</text>
+<text x="48" y="94" font-size="16" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">You state the intent. Deterministic hooks — not model goodwill — drive every sprint to done.</text>
+<rect x="48" y="112" width="49.6" height="24" rx="12" fill="#60a5fa22" stroke="#60a5fa88" stroke-width="1"/>
+<text x="72.8" y="128.5" font-size="11.5" fill="#60a5fa" font-weight="600" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">PLAN</text>
+<text x="103.6" y="128.5" font-size="14" fill="#6b7c96" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<rect x="119.6" y="112" width="70.3" height="24" rx="12" fill="#34d39922" stroke="#34d39988" stroke-width="1"/>
+<text x="154.75" y="128.5" font-size="11.5" fill="#34d399" font-weight="600" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">EXECUTE</text>
+<text x="195.9" y="128.5" font-size="14" fill="#6b7c96" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<rect x="211.9" y="112" width="63.4" height="24" rx="12" fill="#f472b622" stroke="#f472b688" stroke-width="1"/>
+<text x="243.6" y="128.5" font-size="11.5" fill="#f472b6" font-weight="600" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">RECORD</text>
+<text x="281.3" y="128.5" font-size="14" fill="#6b7c96" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<rect x="297.3" y="112" width="56.5" height="24" rx="12" fill="#22d3ee22" stroke="#22d3ee88" stroke-width="1"/>
+<text x="325.55" y="128.5" font-size="11.5" fill="#22d3ee" font-weight="600" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">CLEAR</text>
+<text x="359.8" y="128.5" font-size="14" fill="#6b7c96" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">→</text>
+<rect x="375.8" y="112" width="63.4" height="24" rx="12" fill="#a78bfa22" stroke="#a78bfa88" stroke-width="1"/>
+<text x="407.5" y="128.5" font-size="11.5" fill="#a78bfa" font-weight="600" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">REPEAT</text>
+<text x="1552" y="60" font-size="12" fill="#6b7c96" font-weight="400" text-anchor="end" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">runs on</text>
+<rect x="1465.2" y="70" width="86.8" height="24" rx="12" fill="#e6edf722" stroke="#e6edf788" stroke-width="1"/>
+<text x="1508.6" y="86.5" font-size="12.5" fill="#e6edf7" font-weight="600" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">OpenCode</text>
+<rect x="1393.2" y="70" width="64" height="24" rx="12" fill="#e6edf722" stroke="#e6edf788" stroke-width="1"/>
+<text x="1425.2" y="86.5" font-size="12.5" fill="#e6edf7" font-weight="600" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Codex</text>
+<rect x="1275.6" y="70" width="109.6" height="24" rx="12" fill="#e6edf722" stroke="#e6edf788" stroke-width="1"/>
+<text x="1330.4" y="86.5" font-size="12.5" fill="#e6edf7" font-weight="600" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Claude Code</text>
+<text x="1552" y="122" font-size="12.5" fill="#9fb0c8" font-weight="400" text-anchor="end" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">planning: Opus 5.5 · orchestrator + workers: Sonnet</text>
+<rect x="40" y="162" width="222" height="420" rx="14" fill="#111a2e" stroke="#a78bfa99" stroke-width="1.6"/>
+<rect x="40" y="162" width="222" height="6" rx="3" fill="#a78bfa" stroke="#a78bfa" stroke-width="0"/>
+<circle cx="70" cy="200" r="15" fill="#a78bfa"/>
+<text x="70" y="205.5" font-size="15" fill="#0b1220" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">1</text>
+<text x="94" y="198" font-size="17" fill="#e6edf7" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Init</text>
+<text x="94" y="217" font-size="12" fill="#a78bfa" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">human confirms · once</text>
+<text x="72" y="250" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/agentic-agile:init</text>
+<circle cx="62" cy="272.5" r="2.6" fill="#a78bfa"/>
+<text x="72" y="277" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">tokens 150k / 250k</text>
+<circle cx="62" cy="293.5" r="2.6" fill="#a78bfa"/>
+<text x="72" y="298" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">time 20 / 30 min</text>
+<circle cx="62" cy="314.5" r="2.6" fill="#a78bfa"/>
+<text x="72" y="319" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">models per role</text>
+<circle cx="62" cy="335.5" r="2.6" fill="#a78bfa"/>
+<text x="72" y="340" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">.gitignore → .agentic/</text>
+<circle cx="62" cy="356.5" r="2.6" fill="#a78bfa"/>
+<text x="72" y="361" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">docs/agents/ tracked? (no)</text>
+<circle cx="62" cy="377.5" r="2.6" fill="#a78bfa"/>
+<text x="72" y="382" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">commit author = you</text>
+<text x="58" y="407" font-size="10.5" fill="#6b7c96" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">WRITTEN BY THE HARNESS</text>
+<text x="72" y="425" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">docs/agents/defaults.md</text>
+<rect x="52" y="540" width="198" height="30" rx="8" fill="#a78bfa18" stroke="#a78bfa55" stroke-width="1"/>
+<text x="151" y="560" font-size="12" fill="#a78bfa" font-weight="650" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">agentic init --apply</text>
+<rect x="286" y="162" width="222" height="420" rx="14" fill="#111a2e" stroke="#60a5fa99" stroke-width="1.6"/>
+<rect x="286" y="162" width="222" height="6" rx="3" fill="#60a5fa" stroke="#60a5fa" stroke-width="0"/>
+<circle cx="316" cy="200" r="15" fill="#60a5fa"/>
+<text x="316" y="205.5" font-size="15" fill="#0b1220" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">2</text>
+<text x="340" y="198" font-size="17" fill="#e6edf7" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Plan</text>
+<text x="340" y="217" font-size="12" fill="#60a5fa" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">human-gated · Opus 5.5</text>
+<circle cx="308" cy="245.5" r="2.6" fill="#60a5fa"/>
+<text x="318" y="250" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">retrospective → memory</text>
+<circle cx="308" cy="266.5" r="2.6" fill="#60a5fa"/>
+<text x="318" y="271" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">intake (5-part intent)</text>
+<circle cx="308" cy="287.5" r="2.6" fill="#60a5fa"/>
+<text x="318" y="292" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">standards (gate matrix)</text>
+<circle cx="308" cy="308.5" r="2.6" fill="#60a5fa"/>
+<text x="318" y="313" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">planner: stories → tasks</text>
+<circle cx="308" cy="329.5" r="2.6" fill="#60a5fa"/>
+<text x="318" y="334" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">  → validate → tests-only</text>
+<circle cx="308" cy="350.5" r="2.6" fill="#60a5fa"/>
+<text x="318" y="355" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">  → waves + deps</text>
+<text x="304" y="380" font-size="10.5" fill="#6b7c96" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">GATE-STAGE2-COMPLETE</text>
+<text x="318" y="398" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">every story planned</text>
+<text x="318" y="417" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">self-contained sprint</text>
+<rect x="298" y="540" width="198" height="30" rx="8" fill="#60a5fa18" stroke="#60a5fa55" stroke-width="1"/>
+<text x="397" y="560" font-size="12" fill="#60a5fa" font-weight="650" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">human says “go”</text>
+<rect x="532" y="162" width="222" height="420" rx="14" fill="#111a2e" stroke="#fbbf2499" stroke-width="1.6"/>
+<rect x="532" y="162" width="222" height="6" rx="3" fill="#fbbf24" stroke="#fbbf24" stroke-width="0"/>
+<circle cx="562" cy="200" r="15" fill="#fbbf24"/>
+<text x="562" y="205.5" font-size="15" fill="#0b1220" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">3</text>
+<text x="586" y="198" font-size="17" fill="#e6edf7" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Orchestrate</text>
+<text x="586" y="217" font-size="12" fill="#fbbf24" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">autonomous · Sonnet</text>
+<circle cx="554" cy="245.5" r="2.6" fill="#fbbf24"/>
+<text x="564" y="250" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">dispatch wave workers</text>
+<circle cx="554" cy="266.5" r="2.6" fill="#fbbf24"/>
+<text x="564" y="271" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">sleep on budget watch</text>
+<circle cx="554" cy="287.5" r="2.6" fill="#fbbf24"/>
+<text x="564" y="292" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">sweep: merge · retry</text>
+<circle cx="554" cy="308.5" r="2.6" fill="#fbbf24"/>
+<text x="564" y="313" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">  · re-plan · escalate</text>
+<text x="550" y="346" font-size="10.5" fill="#6b7c96" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">OWNS ONLY</text>
+<text x="564" y="364" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">init.md · plan-ready.md</text>
+<text x="564" y="383" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">execution.log</text>
+<text x="550" y="406" font-size="10.5" fill="#6b7c96" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NEVER WRITES CODE</text>
+<text x="564" y="424" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">gate-supervisor-scope</text>
+<rect x="544" y="540" width="198" height="30" rx="8" fill="#fbbf2418" stroke="#fbbf2455" stroke-width="1"/>
+<text x="643" y="560" font-size="12" fill="#fbbf24" font-weight="650" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">one sprint per run</text>
+<rect x="778" y="162" width="290" height="420" rx="14" fill="#111a2e" stroke="#34d39999" stroke-width="1.6"/>
+<rect x="778" y="162" width="290" height="6" rx="3" fill="#34d399" stroke="#34d399" stroke-width="0"/>
+<circle cx="808" cy="200" r="15" fill="#34d399"/>
+<text x="808" y="205.5" font-size="15" fill="#0b1220" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">4</text>
+<text x="832" y="198" font-size="17" fill="#e6edf7" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Execute</text>
+<text x="832" y="217" font-size="12" fill="#34d399" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">one worktree per task · Sonnet</text>
+<rect x="794" y="238" width="238" height="58" rx="10" fill="#0f1729" stroke="#34d39966" stroke-width="1"/>
+<text x="808" y="261" font-size="14" fill="#34d399" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">RED</text>
+<text x="846" y="261" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">tests fail by assertion</text>
+<text x="808" y="282" font-size="11" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stop ⟶ gate-red-verify</text>
+<path d="M905 296 L905 308" fill="none" stroke="#34d399" stroke-width="1.6" marker-end="url(#ah-34d399)"/>
+<rect x="794" y="308" width="238" height="58" rx="10" fill="#0f1729" stroke="#34d39966" stroke-width="1"/>
+<text x="808" y="331" font-size="14" fill="#34d399" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">SCAFFOLD</text>
+<text x="896" y="331" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">one stub per symbol</text>
+<text x="808" y="352" font-size="11" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stop ⟶ gate-scaffold-verify</text>
+<path d="M905 366 L905 378" fill="none" stroke="#34d399" stroke-width="1.6" marker-end="url(#ah-34d399)"/>
+<rect x="794" y="378" width="238" height="58" rx="10" fill="#0f1729" stroke="#34d39966" stroke-width="1"/>
+<text x="808" y="401" font-size="14" fill="#34d399" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">GREEN</text>
+<text x="866" y="401" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">least code to pass</text>
+<text x="808" y="422" font-size="11" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stop ⟶ gate-green-verify</text>
+<path d="M905 436 L905 448" fill="none" stroke="#34d399" stroke-width="1.6" marker-end="url(#ah-34d399)"/>
+<rect x="794" y="448" width="238" height="58" rx="10" fill="#0f1729" stroke="#34d39966" stroke-width="1"/>
+<text x="808" y="471" font-size="14" fill="#34d399" font-weight="800" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">REVIEW</text>
+<text x="876" y="471" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">orphans · duplicates</text>
+<text x="808" y="492" font-size="11" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stop ⟶ gate-structural-integrity</text>
+<path d="M1032 480 C1058 462 1058 284 1032 266" fill="none" stroke="#34d399" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#ah-34d399)"/>
+<text x="808" y="528" font-size="11.5" fill="#34d399" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">gate block → worker keeps working · retry ≤3</text>
+<rect x="790" y="540" width="266" height="30" rx="8" fill="#34d39918" stroke="#34d39955" stroke-width="1"/>
+<text x="923" y="560" font-size="12" fill="#34d399" font-weight="650" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">merge on pass · waves in parallel</text>
+<rect x="1092" y="162" width="222" height="420" rx="14" fill="#111a2e" stroke="#f472b699" stroke-width="1.6"/>
+<rect x="1092" y="162" width="222" height="6" rx="3" fill="#f472b6" stroke="#f472b6" stroke-width="0"/>
+<circle cx="1122" cy="200" r="15" fill="#f472b6"/>
+<text x="1122" y="205.5" font-size="15" fill="#0b1220" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">5</text>
+<text x="1146" y="198" font-size="17" fill="#e6edf7" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Final gate</text>
+<text x="1146" y="217" font-size="12" fill="#f472b6" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">record · by the harness</text>
+<circle cx="1114" cy="245.5" r="2.6" fill="#f472b6"/>
+<text x="1124" y="250" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">full standards matrix</text>
+<circle cx="1114" cy="266.5" r="2.6" fill="#f472b6"/>
+<text x="1124" y="271" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">zero suppressions</text>
+<circle cx="1114" cy="287.5" r="2.6" fill="#f472b6"/>
+<text x="1124" y="292" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">every box ticked</text>
+<text x="1110" y="317" font-size="10.5" fill="#6b7c96" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">GATE-FINAL → STATS</text>
+<text x="1124" y="335" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">sprintN/stats.md</text>
+<text x="1124" y="354" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">  tasks · attempts · gates</text>
+<text x="1124" y="373" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">  tokens · human msgs</text>
+<text x="1124" y="392" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">docs/agents/NEXT.md</text>
+<text x="1124" y="411" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">  the handoff</text>
+<rect x="1104" y="540" width="198" height="30" rx="8" fill="#f472b618" stroke="#f472b655" stroke-width="1"/>
+<text x="1203" y="560" font-size="12" fill="#f472b6" font-weight="650" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">sprint DONE</text>
+<rect x="1338" y="162" width="222" height="420" rx="14" fill="#111a2e" stroke="#22d3ee99" stroke-width="1.6"/>
+<rect x="1338" y="162" width="222" height="6" rx="3" fill="#22d3ee" stroke="#22d3ee" stroke-width="0"/>
+<circle cx="1368" cy="200" r="15" fill="#22d3ee"/>
+<text x="1368" y="205.5" font-size="15" fill="#0b1220" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">6</text>
+<text x="1392" y="198" font-size="17" fill="#e6edf7" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Clear</text>
+<text x="1392" y="217" font-size="12" fill="#22d3ee" font-weight="600" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">fresh context · repeat</text>
+<circle cx="1360" cy="245.5" r="2.6" fill="#22d3ee"/>
+<text x="1370" y="250" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Stop hook shows totals</text>
+<circle cx="1360" cy="266.5" r="2.6" fill="#22d3ee"/>
+<text x="1370" y="271" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">you run /clear</text>
+<circle cx="1360" cy="287.5" r="2.6" fill="#22d3ee"/>
+<text x="1370" y="292" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">SessionStart loads</text>
+<circle cx="1360" cy="308.5" r="2.6" fill="#22d3ee"/>
+<text x="1370" y="313" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">  NEXT.md into context</text>
+<circle cx="1360" cy="329.5" r="2.6" fill="#22d3ee"/>
+<text x="1370" y="334" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">next sprint plans</text>
+<circle cx="1360" cy="350.5" r="2.6" fill="#22d3ee"/>
+<text x="1370" y="355" font-size="13" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">  from disk, not memory</text>
+<text x="1356" y="380" font-size="10.5" fill="#6b7c96" font-weight="700" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">TOKENS (LEDGER)</text>
+<text x="1370" y="398" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">sprint · session</text>
+<text x="1370" y="417" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">whole project</text>
+<rect x="1350" y="540" width="198" height="30" rx="8" fill="#22d3ee18" stroke="#22d3ee55" stroke-width="1"/>
+<text x="1449" y="560" font-size="12" fill="#22d3ee" font-weight="650" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">agentic stats show</text>
+<path d="M266 362 L282 362" fill="none" stroke="#60a5fa" stroke-width="2.4" marker-end="url(#ah-60a5fa)"/>
+<path d="M512 362 L528 362" fill="none" stroke="#fbbf24" stroke-width="2.4" marker-end="url(#ah-fbbf24)"/>
+<path d="M758 362 L774 362" fill="none" stroke="#34d399" stroke-width="2.4" marker-end="url(#ah-34d399)"/>
+<path d="M1072 362 L1088 362" fill="none" stroke="#f472b6" stroke-width="2.4" marker-end="url(#ah-f472b6)"/>
+<path d="M1318 362 L1334 362" fill="none" stroke="#22d3ee" stroke-width="2.4" marker-end="url(#ah-22d3ee)"/>
+<path d="M858 584 L858 622 L436 622 L436 586" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ah-f87171)"/>
+<rect x="476" y="608" width="520" height="28" rx="0" fill="#0b1220" stroke="#0b1220" stroke-width="0"/>
+<text x="486" y="627" font-size="12.5" fill="#f87171" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">hard budget hit → worker stopped → sprint paused → planner splits the task (≤2) → resume</text>
+<path d="M1453 584 L1453 662 L346 662 L346 586" fill="none" stroke="#22d3ee" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ah-22d3ee)"/>
+<rect x="838" y="648" width="430" height="28" rx="0" fill="#0b1220" stroke="#0b1220" stroke-width="0"/>
+<text x="848" y="667" font-size="12.5" fill="#22d3ee" font-weight="650" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">repeat: next sprint (planned self-contained) until the project is done</text>
+<rect x="40" y="704" width="760" height="186" rx="14" fill="#111a2e" stroke="#26344f" stroke-width="1.2"/>
+<text x="62" y="736" font-size="16" fill="#e6edf7" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Per-attempt time box</text>
+<text x="262" y="736" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">tokens = context in use + all output · hooks measure it from the worker's own log</text>
+<rect x="62" y="762" width="716" height="16" rx="8" fill="url(#bar)" stroke="none" stroke-width="0"/>
+<line x1="491.6" y1="754" x2="491.6" y2="786" stroke="#e6edf7" stroke-width="2"/>
+<line x1="778" y1="754" x2="778" y2="786" stroke="#e6edf7" stroke-width="2"/>
+<text x="62" y="802" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">0</text>
+<text x="491.6" y="802" font-size="12.5" fill="#fbbf24" font-weight="700" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">soft 150k tok · 20 min</text>
+<text x="778" y="802" font-size="12.5" fill="#f87171" font-weight="700" text-anchor="end" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">hard 250k · 30 min</text>
+<text x="62" y="832" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">soft → warning injected into the worker's tool result: finish or end gracefully</text>
+<text x="62" y="854" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">hard → one report write, 3 refused calls, then the hook stops it (continue:false / abort) — never merged</text>
+<text x="62" y="878" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">budget source: tasks.md budget: line  &gt;  worktree task.env  &gt;  defaults.md  &gt;  built-in</text>
+<rect x="820" y="704" width="740" height="186" rx="14" fill="#111a2e" stroke="#26344f" stroke-width="1.2"/>
+<text x="842" y="736" font-size="16" fill="#e6edf7" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">State on disk — the repo is the memory</text>
+<text x="842" y="764" font-size="13" fill="#60a5fa" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">docs/agents/</text>
+<text x="856" y="782.5" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">defaults.md</text>
+<text x="856" y="801" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">NEXT.md</text>
+<text x="856" y="819.5" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">memory.md</text>
+<text x="856" y="838" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">sprintN/stories.md · plan.md</text>
+<text x="856" y="856.5" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">sprintN/sNN-*/tasks · validate · plan</text>
+<text x="856" y="875" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">sprintN/execution.log · stats.md</text>
+<text x="1202" y="764" font-size="13" fill="#22d3ee" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.agentic/  (always git-ignored)</text>
+<text x="1216" y="782.5" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">transcripts/  full capture</text>
+<text x="1216" y="801" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">budget/  one file per attempt</text>
+<text x="1216" y="819.5" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">ledger/  tokens per session</text>
+<text x="1216" y="838" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">logs/gates.jsonl  every verdict</text>
+<text x="1216" y="856.5" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">worktrees/  one per task</text>
+<text x="1216" y="875" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">state/  sprint closes · locks</text>
+<rect x="40" y="912" width="1520" height="196" rx="14" fill="#0f1729" stroke="#26344f" stroke-width="1.2"/>
+<text x="62" y="944" font-size="16" fill="#e6edf7" font-weight="750" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Harness — deterministic hooks, outside model control</text>
+<text x="492" y="944" font-size="12" fill="#9fb0c8" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">same scripts on every host: hooks.json (Claude Code, Codex) · generated plugin (OpenCode)</text>
+<rect x="52" y="962" width="288" height="132" rx="10" fill="#111a2e" stroke="#22d3ee77" stroke-width="1.2"/>
+<text x="68" y="988" font-size="14" fill="#22d3ee" font-weight="800" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">SessionStart</text>
+<text x="68" y="1012" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· ensure-tools: build + PATH</text>
+<text x="68" y="1031" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· load NEXT.md handoff</text>
+<text x="68" y="1050" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· re-apply .gitignore</text>
+<rect x="354" y="962" width="288" height="132" rx="10" fill="#111a2e" stroke="#fbbf2477" stroke-width="1.2"/>
+<text x="370" y="988" font-size="14" fill="#fbbf24" font-weight="800" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">PreToolUse</text>
+<text x="370" y="1012" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· supervisor-scope</text>
+<text x="370" y="1031" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· commit author = you</text>
+<text x="370" y="1050" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· worktree isolation</text>
+<text x="370" y="1069" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· budget: refuse at hard</text>
+<rect x="656" y="962" width="288" height="132" rx="10" fill="#111a2e" stroke="#fbbf2477" stroke-width="1.2"/>
+<text x="672" y="988" font-size="14" fill="#fbbf24" font-weight="800" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">PostToolUse</text>
+<text x="672" y="1012" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· budget: warn / stop</text>
+<text x="672" y="1031" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· transcripts: record</text>
+<rect x="958" y="962" width="288" height="132" rx="10" fill="#111a2e" stroke="#34d39977" stroke-width="1.2"/>
+<text x="974" y="988" font-size="14" fill="#34d399" font-weight="800" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">SubagentStop</text>
+<text x="974" y="1012" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· role gate (red/green/…)</text>
+<text x="974" y="1031" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· comms: output.md</text>
+<text x="974" y="1050" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· block → keep working</text>
+<rect x="1260" y="962" width="288" height="132" rx="10" fill="#111a2e" stroke="#f472b677" stroke-width="1.2"/>
+<text x="1276" y="988" font-size="14" fill="#f472b6" font-weight="800" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Stop</text>
+<text x="1276" y="1012" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· token ledger</text>
+<text x="1276" y="1031" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· announce sprint totals</text>
+<text x="1276" y="1050" font-size="12.5" fill="#e6edf7" font-weight="400" text-anchor="start" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">· ask for /clear</text>
+<text x="800" y="1142" font-size="12" fill="#6b7c96" font-weight="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">tools on PATH as `agentic &lt;tool&gt;` · md-db + ctx-symbols auto-built · commits authored by you · open source (MIT)</text>
+</svg>
