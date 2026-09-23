@@ -22,6 +22,12 @@
 
 set -uo pipefail
 
+# bin/ensure-tools resolves the REAL backend binaries (bin/md-db + bin/ctx-symbols are
+# PATH shims, so `command -v` alone would always succeed and hide a missing backend).
+GATELIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+have_tool() { "$GATELIB_DIR/ensure-tools" --resolve "$1" >/dev/null 2>&1; }
+export PATH="$GATELIB_DIR:$PATH"   # bare `md-db`/`ctx-symbols` -> shim -> real binary
+
 warn() { echo "WARN[$GATE_NAME]: $*" >&2; }
 fail() { echo "BLOCK[$GATE_NAME]: $*" >&2; exit 2; }
 note() { echo "[$GATE_NAME] $*" >&2; }
@@ -42,6 +48,22 @@ load_task_env() {
   set -a; . "$te"; set +a
 }
 load_task_env
+
+# Budget overrun release (bin/budget). A worker that hit its HARD time/token limit is
+# being stopped — its SubagentStop gate must not block the stop (exit 2 would make it keep
+# working past the limit). It is released WITHOUT verification: the attempt is NOT a pass,
+# the supervisor never merges it, and the task goes to a mid-sprint re-plan. (A worker
+# forging the marker gains nothing: the only outcome is its task being re-planned.)
+budget_release() {
+  local m; m="$(repo_dir)/.agentic/budget-exceeded"
+  [ -f "$m" ] || return 0
+  case "${AGENT_ROLE:-}" in red-worker|scaffolder|green-worker) ;; *) return 0 ;; esac
+  grep -q "role=${AGENT_ROLE} attempt=${ATTEMPT:-}" "$m" 2>/dev/null || return 0
+  echo "[${GATE_NAME:-gate}] BUDGET-EXCEEDED — stop released, NOT verified: $(head -1 "$m")" >&2
+  echo "  This attempt is not a pass. Supervisor: do not merge; TaskStop/mark-killed, re-plan." >&2
+  exit 0
+}
+budget_release
 
 # Story-bound, append-only inter-agent comms (init.md <-> output.md) — THE channel,
 # not a throwaway. Per story: the supervisor APPENDS one block to init.md per dispatch
@@ -96,7 +118,7 @@ latest_block() {
 }
 
 # True if ctx-symbols is available.
-have_ctx_symbols() { command -v ctx-symbols >/dev/null 2>&1; }
+have_ctx_symbols() { have_tool ctx-symbols; }
 
 # Count definitions of a symbol; echoes an integer. Uses ctx-symbols, else grep.
 symbol_count() {

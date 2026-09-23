@@ -5,5 +5,7 @@
 type "execution-log" {            // docs/agents/sprintN/execution.log (wrapped as .md if validated)
     field "type"   type="string" required=#true                     // "execution-log"
     field "sprint" type="number" required=#true
-    // line format: <ISO8601> wave-K red|green|scaffold|review|gate SN-NN start|complete ...
+    // line format: <ISO8601> wave-K red|green|scaffold|review|gate|budget|replan SN-NN <state> ...
+    //   budget: `wave-K budget SN-NN kill Tn tokens=… elapsed=…`  (hard limit hit, TaskStop)
+    //   replan: `wave-K replan SN-NN start|complete Tn`            (mid-sprint split)
 }

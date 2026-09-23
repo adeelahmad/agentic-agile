@@ -2,5 +2,5 @@
 # execution.log: each line matches the fixed transition format.
 set -euo pipefail
 f="${1:?execution.log}"
-grep -vqE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T.* (wave-[0-9]+) (red|green|scaffold|review|gate) ' "$f" \
+grep -vqE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T.* (wave-[0-9]+) (red|green|scaffold|review|gate|budget|replan) ' "$f" \
   && { echo "bad ledger line" >&2; exit 2; } || exit 0

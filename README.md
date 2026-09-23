@@ -37,10 +37,9 @@ block the stop and feed the failure reason back to the supervisor.
 ## Quick start
 
 ```bash
-# 1) Build + install the gate backends (ctx-symbols + md-db, both from source)
-#    requires a Rust toolchain >= 1.82 (rustup.rs or `brew install rust`)
-./plugin/tools/install.sh
-#    ensure ~/.local/bin (or ~/.cargo/bin) is on PATH
+# 1) Have a Rust toolchain >= 1.82 (rustup.rs or `brew install rust`). The plugin
+#    builds its gate backends (ctx-symbols + md-db) itself on first session start and
+#    puts them on PATH for every agent. (Manual alternative: ./plugin/tools/install.sh)
 
 # 2) Add the marketplace and install the plugin (inside Claude Code)
 /plugin marketplace add adeelahmad/agentic-agile
@@ -86,8 +85,15 @@ Once started:
    STRUCTURAL-REVIEW per wave, then a once-per-sprint FINAL-GATE, each enforced by a
    deterministic hook gate.
 
-The gate backends (`ctx-symbols`, `md-db`) must be on PATH — see step 1 above. Without
-them the gates WARN and fall back to grep (never a false block, never a silent pass).
+The gate backends (`ctx-symbols`, `md-db`) are built and put on PATH automatically on
+the first session (step 1). Until they exist, planning gates WARN and fall back to grep
+(never a false block, never a silent pass); execution waits for them.
+
+Planning agents run on Opus 5.5 and everything else (orchestrator and workers) on
+Sonnet. Every worker attempt is time-boxed (tokens + minutes, soft warning then hard
+stop), and a task that overruns is split mid-sprint by the planner rather than retried.
+Each sprint is planned to be self-contained, so context can be cleared between sprints.
+Budgets and models are per-project in `docs/agents/agentic.conf`.
 
 ## What it does
 

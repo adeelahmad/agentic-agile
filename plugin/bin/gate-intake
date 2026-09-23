@@ -4,6 +4,7 @@
 # without failure/success scenarios is the #1 cause of wrong-scope builds.
 # Run as a self-check before reporting; also wired as the SubagentStop(intake) backstop.
 set -uo pipefail
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; export PATH="$BIN_DIR:$PATH"  # md-db shim -> real binary
 GATE_NAME="gate-intake"
 
 f="${1:-${INTAKE_FILE:-}}"
@@ -17,7 +18,7 @@ if [ -z "$f" ] || [ ! -f "$f" ]; then
 fi
 
 # md-db structural validation when stories.md + schema are available.
-if command -v md-db >/dev/null 2>&1 && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/schemas/planning-artifacts.kdl" ]; then
+if "$BIN_DIR/ensure-tools" --resolve md-db >/dev/null 2>&1 && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/schemas/planning-artifacts.kdl" ]; then
   case "$f" in
     */stories.md) md-db validate "$(dirname "$f")" --schema "${CLAUDE_PLUGIN_ROOT}/schemas/planning-artifacts.kdl" \
         || { echo "BLOCK[$GATE_NAME]: $f failed planning-artifacts.kdl" >&2; exit 2; } ;;

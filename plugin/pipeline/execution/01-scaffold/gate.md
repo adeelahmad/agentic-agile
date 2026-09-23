@@ -17,6 +17,6 @@ Fixed (v0.2): symbol set comes from `.agentic/scaffold-symbols` (scaffolder-writ
 not from plan-ready.md test paths; shim detection keys on the `// agentic:shim` marker,
 not any `mod common`.
 
-Self-check (v0.2): the worker runs `bin/selfcheck` (this same gate) BEFORE reporting
+Self-check (v0.2): the worker runs `selfcheck` (this same gate) BEFORE reporting
 done. A PASS there means this hook will pass — the hook is the backstop, not the first
 line of defense.

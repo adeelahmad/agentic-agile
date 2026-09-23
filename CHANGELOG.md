@@ -20,6 +20,42 @@ bundled `ctx-symbols` crate together under one SemVer line:
 Keep `plugin.json` `version`, the `ctx-symbols` `Cargo.toml` `version`, and the git
 tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
 
+## [0.10.0] - 2026-09-23
+
+### Added
+- **Tools install themselves and are always on PATH.** New `SessionStart` hook
+  `bin/ensure-tools` builds `md-db` + `ctx-symbols` from the bundled source into the
+  plugin data dir (background, once per plugin version; `--sync` to force) and tells the
+  model where every tool is. `bin/md-db` / `bin/ctx-symbols` are PATH shims (the
+  platform puts the plugin's `bin/` on PATH for every session and sub-agent) that exec
+  the real binary. Agents now call `selfcheck`, `md-db`, `budget`, … by bare name, and
+  the prompts tell them never to search. `gate-tooling` tries to install before blocking.
+- **Per-attempt time box (tokens + wall clock).** New `bin/budget`: soft limits (default
+  40k tokens / 10 min) warn the worker inside its tool results; hard limits (60k / 15
+  min) deny further tool calls except the output.md report, release the worker's
+  SubagentStop gate unverified, and surface a KILL to the supervisor via `budget watch`.
+  Configurable per project (`docs/agents/agentic.conf`, template in
+  `templates/agentic.conf`) and per task (`budget:` line in tasks.md).
+- **Orchestrator loop: dispatch → sleep → sweep.** The supervisor dispatches background
+  workers, sleeps on `budget watch`, then `TaskStop`s workers past their hard limit.
+- **Mid-sprint re-plan route.** A task killed at its hard limit is not retried: the
+  sprint pauses, the planner is dispatched with `mode: replan`
+  (`pipeline/planning/02-planner/replan.template.md`) to split it (`split_from:`),
+  leaving done tasks untouched, and the sprint resumes. Capped per task lineage
+  (`AGENTIC_MAX_REPLANS`, default 2; `budget replans`). New execution.log phases
+  `budget` and `replan`.
+- **Self-contained sprints.** The planner prompt requires every sprint to be completable
+  on its own (context is cleared between sprints); `gate-stage2-complete` blocks
+  references to a later sprint's stories and work deferred into a later sprint. The
+  supervisor asks the human to `/clear` at each sprint boundary.
+
+### Changed
+- **Models:** planning agents (intake, standards, planner, archivist) default to
+  `claude-opus-5-5`; execution agents and the orchestrator skill default to `sonnet`.
+  Per-project override via `AGENTIC_MODEL_PLANNING` / `AGENTIC_MODEL_WORKER`.
+- Gates detect backends with `ensure-tools --resolve` (the real binary), not
+  `command -v` (which would now find the shim).
+
 ## [0.9.0] - 2026-07-03
 
 ### Added

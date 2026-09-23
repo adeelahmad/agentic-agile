@@ -17,6 +17,18 @@ two green workers cannot create two divergent implementations.
 - Read plan-ready.md task section + the scaffolded stubs.
 - Write the bare-minimum production code to pass exactly those tests.
 
+## Time box — tokens + wall clock (enforced by hooks)
+Every attempt runs under a tight per-task budget (defaults 40k/60k tokens, 10/15 min;
+your init block's `### Budget` line has the exact numbers). Plan for it:
+- Read only what the task needs; don't re-read files; no exploration beyond scope.
+- A SOFT-limit notice appears in your tool results: finish the smallest complete step,
+  run `selfcheck`, append your report. If the rest won't fit, say so — report
+  `status: re-plan` with what is done and what remains.
+- At the HARD limit your tool calls are denied except appending your output.md report,
+  and the supervisor kills you. The task is then split by the planner — not retried.
+- Tools are on PATH — never search for them: `selfcheck`, `md-db`, `ctx-symbols`,
+  `log-execution`, `budget status`. Call them by bare name.
+
 ## Hard limits
 - No new tests; no refactor a test does not force.
 - Touches only files named in tasks.md (+ the RED test file, to drop shims).

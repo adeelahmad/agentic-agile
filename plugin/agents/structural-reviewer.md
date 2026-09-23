@@ -17,6 +17,10 @@ engine reimplemented under a second name.
 - Detect parallel implementations of one abstraction (two engines, one job).
 - Detect duplicate helpers reimplemented under different names.
 
+## Tools
+Everything is on PATH — never search for it: `selfcheck`, `md-db`, `ctx-symbols`,
+`log-execution`, `budget`, `transcripts`. Call them by bare name.
+
 ## Hard limits
 - Read-only. Writes only output.md findings; fixes nothing itself.
 
@@ -38,6 +42,6 @@ merged code. When done you MUST **append** your findings as a new block to
     ### Next
     continue / retry the implicated GREEN task / HALT the chain
 
-Then run `${CLAUDE_PLUGIN_ROOT}/bin/selfcheck` and fix anything before reporting done —
+Then run `selfcheck` and fix anything before reporting done —
 the SubagentStop gate BLOCKS unless your latest `output.md` block exists, is from
 structural-reviewer, and carries `### Summary` / `### Result` / `### Next`.

@@ -19,7 +19,7 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 | script | event · matcher | checks | exit 2 when |
 |--------|-----------------|--------|-------------|
 | gate-supervisor-scope     | PreToolUse · Write\|Edit\|MultiEdit | MAIN agent (no `agent_type`) may not write production source mid-sprint, nor hand-author planning artifacts (stories/tasks/validate/plan/intake/standards.md — dispatch the activity); sub-agents (`agent_type` present) exempt | supervisor writes source / hand-writes a planner-owned artifact |
-| gate-tooling              | SubagentStart · exec roles + supervisor self-check | md-db + ctx-symbols on PATH (execution may not run grep-degraded) | a backend is missing |
+| gate-tooling              | SubagentStart · exec roles + supervisor self-check | md-db + ctx-symbols installed (execution may not run grep-degraded); runs `ensure-tools --sync` first | a backend is missing and can't be built |
 | gate-validate-artifact    | PostToolUse · Write         | md-db-validate the written artifact | artifact malformed |
 | gate-red-verify           | SubagentStop · red-worker   | worktree-isolated; appended output.md block (validate_comms); every new test FAILS BY ASSERTION; no regression; diff = tests+shims | no/stale output.md block / shared-tree run / a new test passes / prod code / regression |
 | gate-scaffold-verify      | SubagentStop · scaffolder   | worktree-isolated; appended output.md block; one def per symbol (`.agentic/scaffold-symbols`); panic+TODO; no marked shim; no clobber | no/stale output.md block / shared-tree run / impl body / dup / shim remains |
@@ -27,7 +27,7 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 | gate-structural-integrity | SubagentStop · structural-reviewer | appended output.md block; orphan/parallel/duplicate via ctx-symbols | no/stale output.md block / foundation-poisoning finding |
 | gate-final                | SubagentStop · final-gate   | full matrix; zero suppressions; all plan-ready ticked | matrix red / suppression / unticked |
 | gate-standards-cited      | SubagentStop · standards    | standards.md citations resolve | dangling citation |
-| gate-stage2-complete      | supervisor self-check       | every story Stage-2 valid; no TBW | incomplete planning |
+| gate-stage2-complete      | supervisor self-check + SubagentStop · planner | every story Stage-2 valid; no TBW; sprint self-contained (no later-sprint story IDs, no work deferred to a later sprint) | incomplete or spilling planning |
 | gate-plan-shape           | called by gates             | each plan checkbox carries `path::fn` | malformed plan |
 | gate-ledger-format        | called by gates             | execution.log line shape | malformed ledger |
 
@@ -39,6 +39,9 @@ ctx-symbols) → WARN + grep fallback; never a silent pass.
 | `worktree-create` | OPTIONAL `git worktree add` helper — wire into **user `settings.json`** as a `WorktreeCreate` hook for a non-git VCS (NOT a valid plugin-manifest event). Built-in `isolation: "worktree"` covers plain git. Also applies the same sparse-checkout + `.gitignore` bootstrap as `worktree-hygiene`. |
 | `worktree-remove` | OPTIONAL `git worktree remove` cleanup companion for the above (user `settings.json` `WorktreeRemove`) |
 | `log-execution` | append a transition line to `execution.log` |
+| `ensure-tools` | SessionStart — builds md-db + ctx-symbols into `$CLAUDE_PLUGIN_DATA/bin` on first run / version change (background), tells the model where the tools are. `--sync` build now · `--wait` · `--resolve T` real binary path |
+| `md-db`, `ctx-symbols` | PATH shims (this `bin/` is on PATH in every session): exec the real binary, building it once if needed. Gates test presence with `ensure-tools --resolve`, never `command -v` |
+| `budget` | per-attempt time box for red/scaffolder/green workers. `hook pre\|post\|stop` (PreToolUse/PostToolUse `*`, SubagentStop): soft limit → warning in the worker's tool result; hard limit → deny tools except the output.md report + `.agentic/budget-exceeded` (the worker gate then releases the stop, unverified). `resolve` · `watch` (supervisor sleep; exits with KILL lines) · `status` · `mark-killed` · `replans` (split cap) |
 
 ## v0.2 — self-check at every step
 

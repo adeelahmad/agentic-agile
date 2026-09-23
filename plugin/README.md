@@ -23,17 +23,39 @@ See `skills/agentic-agile/SKILL.md` for the full supervisor playbook and
 | **md-db** | recommended | validates `.md` artifacts against `schemas/*.kdl` | built from vendored `tools/md-db` (AGPL-3.0; see below) |
 | **Rust toolchain** | required to install | builds both backends + runs the target repo's `cargo fmt/clippy/test/coverage` matrix | rustup (>= 1.85) |
 
-Both backends are **optional**: if absent, the gates WARN and fall back to grep —
-they never falsely block and never silently pass a real check. A run with WARNs has
-*weaker*, not *absent*, gates. Install both for full enforcement.
+**You don't install the backends yourself.** A `SessionStart` hook (`bin/ensure-tools`)
+builds `md-db` + `ctx-symbols` from the bundled source into the plugin's data dir the
+first time a session starts (in the background, ~1 min; needs a Rust toolchain), and
+rebuilds them when the plugin version changes. The plugin's `bin/` is on PATH in every
+session and sub-agent, and `bin/md-db` / `bin/ctx-symbols` are shims that run the real
+binaries — so agents call every tool by bare name and never go looking for it.
+Opt out with `AGENTIC_NO_AUTOINSTALL=1`; force a build with `ensure-tools --sync`.
 
-### Install the backends
+If a backend is missing, planning gates WARN and fall back to grep; execution is
+blocked by `gate-tooling` (which first tries to install them itself).
+
+### Installing the backends manually (optional)
 
 ```bash
 ./tools/install.sh            # builds + installs ctx-symbols AND md-db to ~/.local/bin
                               # (both from source; needs a Rust toolchain >= 1.85)
-# ensure ~/.local/bin (or ~/.cargo/bin) is on PATH
 ```
+A copy on PATH or in `~/.local/bin` is used instead of building a second one.
+
+## Models and time boxes
+
+| Role | Default model |
+|---|---|
+| Orchestrator (the skill, main session) | `sonnet` |
+| Planning: intake, standards, planner, archivist | `claude-opus-5-5` |
+| Execution: red-worker, scaffolder, green-worker, structural-reviewer, final-gate | `sonnet` |
+
+Every execution-worker attempt is time-boxed on **tokens and wall clock**, each with a
+soft limit (the worker is warned inside its tool results) and a hard limit (the worker
+is stopped, and its task is split by the planner mid-sprint instead of retried).
+Defaults are tight: **40k / 60k tokens, 10 / 15 min**. Override both budgets and models
+per project in `docs/agents/agentic.conf` (template: `templates/agentic.conf`); a
+single task can carry a planner-authored `budget:` line in its tasks.md section.
 
 ## Install the plugin
 

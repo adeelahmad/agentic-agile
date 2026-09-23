@@ -67,14 +67,19 @@ shellcheck: ## Lint gate scripts (skipped with a warning if shellcheck is absent
 	@command -v shellcheck >/dev/null \
 	  && shellcheck -S error -e SC1091 plugin/bin/_gatelib.sh plugin/bin/gate-* plugin/bin/log-execution \
 	       plugin/bin/selfcheck plugin/bin/transcripts plugin/bin/worktree-create plugin/bin/worktree-remove \
+	       plugin/bin/worktree-hygiene plugin/bin/ensure-tools plugin/bin/md-db plugin/bin/ctx-symbols \
 	  || echo "WARN: shellcheck not installed; skipping (CI enforces it)"
+
+.PHONY: pycheck
+pycheck: ## Byte-compile the Python hook scripts (bin/budget)
+	@python3 -m py_compile plugin/bin/budget && rm -rf plugin/bin/__pycache__ && echo "python ok"
 
 .PHONY: json
 json: ## Validate plugin.json + marketplace.json
 	@python3 -c "import json;json.load(open('plugin/.claude-plugin/plugin.json'));json.load(open('.claude-plugin/marketplace.json'));print('JSON ok')"
 
 .PHONY: lint
-lint: clippy shellcheck json ## Run all linters
+lint: clippy shellcheck pycheck json ## Run all linters
 
 .PHONY: test
 test: ## Run ctx-symbols + md-db unit tests

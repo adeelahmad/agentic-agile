@@ -15,6 +15,6 @@ failure that is NOT a scope issue) re-dispatches the failing GREEN task — it i
 filed as a scope change. ESCALATE is reserved for genuine scope/plan defects;
 ABORT for budget exhaustion.
 
-Self-check (v0.2): the worker runs `bin/selfcheck` (this same gate) BEFORE reporting
+Self-check (v0.2): the worker runs `selfcheck` (this same gate) BEFORE reporting
 done. A PASS there means this hook will pass — the hook is the backstop, not the first
 line of defense.

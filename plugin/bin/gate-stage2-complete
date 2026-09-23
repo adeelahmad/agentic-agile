@@ -3,6 +3,7 @@
 # before the first dispatch). Stage-2 must be complete for EVERY story, no TBW.
 # md-db absent => WARN + structural fallback, never a false block / silent pass.
 set -uo pipefail
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; export PATH="$BIN_DIR:$PATH"  # md-db shim -> real binary
 GATE_NAME="gate-stage2-complete"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${CLAUDE_PLUGIN_ROOT:=$(cd "$HERE/.." && pwd)}"
@@ -38,8 +39,33 @@ else
   echo "WARN[$GATE_NAME]: stories.md not found in $sprint_dir" >&2
 fi
 
-# 3) Structural validation via md-db (fallback to frontmatter check).
-if command -v md-db >/dev/null 2>&1; then
+# 3) Sprint containment: the supervisor clears context between sprints, so a sprint's
+#    plan must not reference a LATER sprint's stories or defer work into one. Earlier
+#    (already-merged) sprints are fine. stories.md (whose "Out of scope" legitimately
+#    names future work) and the append-only comms (init.md/output.md) are exempt.
+this_n="$(basename "$sprint_dir" | grep -oE '[0-9]+' | head -1)"
+if [ -n "$this_n" ]; then
+  later="$(find "$sprint_dir" -name '*.md' ! -name stories.md ! -name init.md ! -name output.md \
+            -exec grep -hoE '\bS[0-9]+-[0-9]+\b' {} + 2>/dev/null \
+            | sed -E 's/^S([0-9]+)-.*/\1/' | sort -un | awk -v n="$this_n" '$1>n' | head -1)"
+  if [ -n "$later" ]; then
+    echo "BLOCK[$GATE_NAME]: sprint $this_n references story IDs from later sprint $later —" \
+         "a sprint must be self-contained (context is cleared between sprints). Cut the" \
+         "dependency or move the story into this sprint." >&2
+    exit 2
+  fi
+  spill="$(find "$sprint_dir" -name '*.md' ! -name stories.md ! -name init.md ! -name output.md \
+             -exec grep -lEi '(continue|continued|finish|finished|complete|completed|defer|deferred|carry|carried|spill|pick(ed)? up)[a-z]* (it |this |the rest )?(in|into|to|over to|during) (the )?(next|later|following|future|subsequent) sprint|sprint ?(n ?\+ ?1|'"$((this_n+1))"')\b' {} + 2>/dev/null | head -1)"
+  if [ -n "$spill" ]; then
+    echo "BLOCK[$GATE_NAME]: $spill defers work into a later sprint — every task must" \
+         "finish inside sprint $this_n. Cut the story smaller; list the remainder under" \
+         "stories.md 'Out of scope'." >&2
+    exit 2
+  fi
+fi
+
+# 4) Structural validation via md-db (fallback to frontmatter check).
+if "$BIN_DIR/ensure-tools" --resolve md-db >/dev/null 2>&1; then
   md-db validate "$sprint_dir" --schema "${CLAUDE_PLUGIN_ROOT}/schemas/planning-artifacts.kdl" \
     || { echo "BLOCK[$GATE_NAME]: md-db rejected $sprint_dir" >&2; exit 2; }
 else
