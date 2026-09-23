@@ -53,6 +53,25 @@ repo_dir() {
   git rev-parse --show-toplevel 2>/dev/null || pwd
 }
 
+# Hosts without built-in sub-agent isolation (Codex, OpenCode) run the SubagentStop gate
+# in the session's cwd — the MAIN tree. A worker there bound its worktree with
+# `agentic bind` (host-adapter recorded it under .agentic/state/agents/<agent_id>.json),
+# so the gate moves into that worktree before checking anything. Reads the hook payload
+# from stdin with a bounded wait (a self-check has no payload and just proceeds).
+_gate_enter_bound_worktree() {
+  [ -z "${REPO_DIR:-}" ] || return 0
+  [ -t 0 ] && return 0
+  local payload="" aid reg wt
+  IFS= read -r -d '' -t 2 payload || true
+  aid="$(printf '%s' "$payload" | sed -nE 's/.*"agent_id"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -1)"
+  [ -n "$aid" ] || return 0
+  reg="$AGENTIC_STATE/agents/$(printf '%s' "$aid" | tr -c 'A-Za-z0-9_.-' '_').json"
+  [ -f "$reg" ] || return 0
+  wt="$(sed -nE 's/.*"worktree"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "$reg" | head -1)"
+  if [ -n "$wt" ] && [ -d "$wt" ]; then export REPO_DIR="$wt"; cd "$wt" || return 0; fi
+}
+_gate_enter_bound_worktree
+
 # Per-worktree task contract the supervisor writes at dispatch (.agentic/task.env):
 # TASK_ID, ATTEMPT, AGENT_ROLE, SCOPE_GLOBS, SCAFFOLD_SYMBOLS, BASE_REF, STORY_DIR,
 # AGENTIC_TRANSCRIPTS_DIR. Real env still overrides (load is non-clobbering only for unset).

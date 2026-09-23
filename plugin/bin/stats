@@ -29,6 +29,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import _paths  # noqa: E402
+import _usage  # noqa: E402
 
 WORKERS = ("red-worker", "scaffolder", "green-worker")
 
@@ -62,31 +63,20 @@ def read_jsonl(path):
 
 # ── ledger ────────────────────────────────────────────────────────────
 def transcript_rows(path, agent, agent_type):
-    """One row per assistant message (streamed duplicates collapse: last usage wins)."""
-    by_id = {}
-    for rec in read_jsonl(path):
-        msg = rec.get("message")
-        if not isinstance(msg, dict) or not msg.get("usage"):
-            continue
-        u = msg["usage"]
-        mid = msg.get("id") or rec.get("uuid")
-        by_id[mid] = {
-            "ts": rec.get("timestamp") or "", "agent": agent, "agent_type": agent_type,
-            "model": msg.get("model") or "", "in": u.get("input_tokens") or 0,
-            "cache_read": u.get("cache_read_input_tokens") or 0,
-            "cache_write": u.get("cache_creation_input_tokens") or 0, "out": u.get("output_tokens") or 0,
-        }
-    return list(by_id.values())
+    """One row per API call, any host (_usage)."""
+    return [{"ts": r["ts"], "agent": agent, "agent_type": agent_type, "model": r["model"], "in": r["in"],
+             "cache_read": r["cache_read"], "cache_write": r["cache_write"], "out": r["out"]} for r in _usage.rows(path)]
 
 
 def update_ledger(payload):
     tp = payload.get("transcript_path") or ""
     sid = payload.get("session_id") or (os.path.basename(tp)[:-6] if tp.endswith(".jsonl") else "")
-    if not (tp and sid and os.path.isfile(tp)):
-        return None
+    if not (tp and sid):
+        return None                                 # (a missing main log is fine: sub-agents may have usage)
     cwd = payload.get("cwd") or os.getcwd()
     rows = transcript_rows(tp, "main", "supervisor")
-    for sub in sorted(glob.glob(os.path.join(tp[:-6], "subagents", "agent-*.jsonl"))):
+    subdir = tp[:-6] if tp.endswith(".jsonl") else tp
+    for sub in sorted(glob.glob(os.path.join(subdir, "subagents", "agent-*.jsonl"))):
         aid = os.path.basename(sub)[len("agent-"):-len(".jsonl")]
         atype = ""
         try:
@@ -95,6 +85,17 @@ def update_ledger(payload):
         except (OSError, ValueError):
             pass
         rows += transcript_rows(sub, aid, atype.split(":")[-1])
+    # Codex / OpenCode sub-agents: registered by host-adapter at SubagentStart/Stop.
+    for reg in glob.glob(os.path.join(_paths.home(cwd, "state/agents"), "*.json")):
+        try:
+            a = json.load(open(reg))
+        except (OSError, ValueError):
+            continue
+        if a.get("session_id") != sid or a.get("host") == "claude":
+            continue
+        atp = a.get("transcript") or _usage.agent_transcript(dict(payload, agent_transcript_path=""), a["agent_id"])
+        if atp and atp != tp:
+            rows += transcript_rows(atp, a["agent_id"], (a.get("agent_type") or "").split(":")[-1])
     for r in rows:
         r["session"] = sid
     out = os.path.join(_paths.home(cwd, "ledger"), "%s.jsonl" % re.sub(r"[^A-Za-z0-9_.-]", "_", sid))

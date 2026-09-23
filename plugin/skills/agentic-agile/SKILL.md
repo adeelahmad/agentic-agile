@@ -41,8 +41,8 @@ value as the Agent call's `model` on every dispatch of that group.
 ## Project setup comes first (init) — and where everything lives
 
 If `docs/agents/defaults.md` does not exist, the project was never initialized: run the
-init flow (`skills/init/SKILL.md` steps 1–2 — `agentic-init --show`, ask the human, then
-`agentic-init --apply …`) **before any planning**. It confirms with the human the limits,
+init flow (`skills/init/SKILL.md` steps 1–2 — `agentic init --show`, ask the human, then
+`agentic init --apply …`) **before any planning**. It confirms with the human the limits,
 models, the `.gitignore` edit, whether `docs/agents/` is tracked (default no), and the
 commit author (default: the human's git identity, no Claude trailers). The harness writes
 the file; you never hand-edit `defaults.md`, `NEXT.md` or `stats.md` (a hook blocks it).
@@ -65,12 +65,36 @@ commit with another author or (unless allowed) a Claude co-author / attribution 
 skill's `model: sonnet` covers the turn it loads in; for a long autonomous run the human
 starts the session on Sonnet (`/model sonnet` or `claude --model sonnet`).
 
+## Running on Codex or OpenCode (same playbook, host vocabulary)
+
+The gates, time box, ledger, stats and handoff are the SAME scripts on every host (Codex
+runs this plugin's `hooks/hooks.json` natively; OpenCode runs them through the plugin
+`agentic install opencode` generates). Only the dispatch vocabulary differs:
+
+| Playbook step | Claude Code | Codex | OpenCode |
+|---|---|---|---|
+| Install | `/plugin install` | `agentic install codex` + `codex plugin add agentic-agile@agentic-agile-marketplace`, then trust hooks in `/hooks` | `agentic install opencode`, restart |
+| Dispatch a role | Agent tool, `subagent_type: <role>` | `spawn_agent`, `agent_type: <role>` | `task` tool, `subagent_type: <role>` |
+| Worker isolation | `isolation: "worktree"` | `agentic task-worktree add <TASK_ID>` → path; the worker's FIRST command is `agentic bind <path>` (hooks then confine it) | same as Codex (the plugin then rewrites its commands/edits into the worktree) |
+| Parallel / wait | `run_in_background` + `budget watch` | several `spawn_agent`, then `wait_agent` | several `task` calls in one message |
+| Stop a worker (backstop) | `TaskStop` | `close_agent` | — (the plugin aborts it) |
+| Merge a passed task | merge the worktree branch | merge `agentic/<TASK_ID>`, then `agentic task-worktree remove <TASK_ID>` | same as Codex |
+| Fresh context per sprint | `/clear` | `/clear` or `/new` | `/new` |
+
+On Codex/OpenCode the dispatch message MUST contain the worktree line — e.g. "Your
+worktree: /abs/.agentic/worktrees/S1-02-T3. First command: `agentic bind
+/abs/.agentic/worktrees/S1-02-T3`." — and `task.env` is written into that worktree before
+dispatch, exactly as on Claude Code. Models per role come from the generated agent files
+(`agentic install` renders them from `docs/agents/defaults.md`).
+
 ## Tools are on PATH — never search for them
 
-This plugin's `bin/` is on PATH in every session and every sub-agent, and a SessionStart
+On Claude Code this plugin's `bin/` is on PATH in every session and sub-agent (OpenCode:
+the plugin adds it; Codex: `agentic` is linked into ~/.local/bin), and a SessionStart
 hook (`ensure-tools`) installs `md-db` + `ctx-symbols` on first use (background build
-from the bundled source). Call everything by bare name: `selfcheck`, `md-db`,
-`ctx-symbols`, `budget`, `log-execution`, `transcripts`, `gate-*`, `ensure-tools`.
+from the bundled source). Call everything as `agentic <tool>` — `agentic selfcheck`, `agentic md-db …`,
+`agentic budget …`, `agentic log-execution …` (on Claude Code and OpenCode the bare
+names work too; on Codex only `agentic` is on PATH, linked by `agentic install codex`).
 Never `find`/`which`/`ls` for them, and never tell a worker where they are — they know.
 If a backend reports "not installed", run `ensure-tools --sync` once (needs cargo).
 

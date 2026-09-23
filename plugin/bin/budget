@@ -42,6 +42,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import _paths  # noqa: E402  (the one file-layout definition)
+import _usage  # noqa: E402  (token usage from any host's session log)
 
 BUDGET_KEYS = ("TOKENS_SOFT", "TOKENS_HARD", "TIME_SOFT_MIN", "TIME_HARD_MIN", "MAX_REPLANS")
 WORKERS = ("red-worker", "scaffolder", "green-worker")
@@ -117,44 +118,24 @@ def resolve(cwd, tasks_file=None, task=None, task_env=None):
 
 
 def transcript_for(payload, agent_id):
-    """Sub-agent transcript: <session>/subagents/agent-<id>.jsonl next to the main one."""
-    tp = payload.get("transcript_path") or ""
-    cands = []
-    if tp:
-        base = tp[:-6] if tp.endswith(".jsonl") else tp
-        cands.append(os.path.join(base, "subagents", "agent-%s.jsonl" % agent_id))
-        cands.append(os.path.join(os.path.dirname(tp), "subagents", "agent-%s.jsonl" % agent_id))
-        cands += glob.glob(os.path.join(os.path.dirname(tp), "*", "subagents", "agent-%s.jsonl" % agent_id))
-    for c in cands:
-        if os.path.isfile(c):
-            return c
-    return ""
+    """The sub-agent's own session log — Claude transcript or Codex rollout (_usage)."""
+    return _usage.agent_transcript(payload, agent_id)
 
 
 def tokens_used(path):
-    """latest context size + cumulative output tokens (streamed lines deduped by msg id)."""
-    if not path:
-        return None
-    seen, out_total, last_ctx = {}, 0, 0
-    try:
-        with open(path) as f:
-            for line in f:
-                try:
-                    rec = json.loads(line)
-                except ValueError:
-                    continue
-                msg = rec.get("message") or {}
-                u = msg.get("usage") if isinstance(msg, dict) else None
-                if not u:
-                    continue
-                ctx = (u.get("input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0)
-                mid = msg.get("id") or rec.get("uuid") or str(len(seen))
-                seen[mid] = u.get("output_tokens") or 0     # last write per message wins
-                last_ctx = ctx
-    except OSError:
-        return None
-    out_total = sum(seen.values())
-    return last_ctx + out_total
+    """latest context size + cumulative output tokens (any host; see _usage)."""
+    return _usage.context_plus_output(path)
+
+
+def bound_worktree(cwd, agent_id):
+    """Codex/OpenCode workers bind their worktree with `agentic bind` (host-adapter)."""
+    st = load_state(os.path.join(_paths.home(cwd, "state/agents"), "%s.json" % safe(agent_id)))
+    wt = (st or {}).get("worktree") or ""
+    return wt if wt and os.path.isdir(wt) else ""
+
+
+def safe(s):
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", s or "")
 
 
 def fmt_k(n):
@@ -196,8 +177,14 @@ def is_report_write(payload, st):
     fp = ti.get("file_path") or ""
     if payload.get("tool_name") in ("Write", "Edit", "MultiEdit") and fp.endswith("output.md"):
         return True
-    cmd = ti.get("command") or ""
-    return payload.get("tool_name") == "Bash" and "output.md" in cmd and re.search(r">>|tee -a", cmd) is not None
+    fp = fp or ti.get("filePath") or ""
+    if payload.get("tool_name") in ("write", "edit") and fp.endswith("output.md"):
+        return True                                            # OpenCode
+    cmd = ti.get("command") if isinstance(ti.get("command"), str) else ""
+    if payload.get("tool_name") == "apply_patch":              # Codex: the patch may touch ONLY output.md
+        files = re.findall(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$", cmd, re.M)
+        return bool(files) and all(f.strip().endswith("output.md") for f in files)
+    return payload.get("tool_name") in ("Bash", "bash") and "output.md" in cmd and re.search(r">>|tee -a", cmd) is not None
 
 
 def hook(mode):
@@ -212,10 +199,12 @@ def hook(mode):
     if not agent_id or not role:
         return
     cwd = payload.get("cwd") or os.getcwd()
-    top = sh("git", "-C", cwd, "rev-parse", "--show-toplevel") or cwd
-    spath = os.path.join(state_dir(cwd), "%s.json" % re.sub(r"[^A-Za-z0-9_.-]", "_", agent_id))
+    top = bound_worktree(cwd, agent_id) or sh("git", "-C", cwd, "rev-parse", "--show-toplevel") or cwd
+    spath = os.path.join(state_dir(cwd), "%s.json" % safe(agent_id))
     st = load_state(spath)
     now = time.time()
+    if st is not None and not st.get("task") and top != st.get("worktree"):
+        st = None                  # bound to its worktree after the first call: re-read task.env
 
     if mode == "stop":
         if st:

@@ -36,7 +36,24 @@ payload="$(cat 2>/dev/null || true)"
 field() { printf '%s' "$payload" | sed -nE "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/p" | head -1; }
 tool="$(field tool_name)"
 file="$(field file_path)"
+[ -n "$file" ] || file="$(field filePath)"
 session="$(field session_id)"
+
+# Codex edits files with apply_patch: tool_input is {"command": "<patch text>"}, the paths
+# live in the patch headers. Check each path exactly as if it were a Write.
+if [ "$tool" = "apply_patch" ] && command -v python3 >/dev/null 2>&1; then
+  printf '%s' "$payload" | python3 -c '
+import json, re, sys
+p = json.load(sys.stdin)
+patch = (p.get("tool_input") or {}).get("command") or ""
+for a, b in re.findall(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$|^\*\*\* Move to: (.+)$", patch, re.M):
+    q = {k: v for k, v in p.items() if k in ("session_id", "agent_type", "agent_id", "cwd")}
+    q["tool_name"] = "Write"; q["tool_input"] = {"file_path": (a or b).strip()}
+    print(json.dumps(q))' | while IFS= read -r one; do
+    printf '%s' "$one" | "$0" || exit 2
+  done
+  exit $?
+fi
 
 # Only guard file-mutating tools that carry a path.
 case "$tool" in Write|Edit|MultiEdit|NotebookEdit) ;; *) exit 0 ;; esac

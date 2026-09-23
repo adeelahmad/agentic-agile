@@ -71,6 +71,29 @@ tag in lockstep. Tag releases as `vMAJOR.MINOR.PATCH`.
   `stats show` prints totals any time. Every gate verdict is logged to
   `.agentic/logs/gates.jsonl`.
 
+- **Codex and OpenCode support — full feature parity.** `agentic install codex|opencode
+  [--project DIR|--global] [--uninstall]` renders the 9 role agents (Codex TOML /
+  OpenCode markdown), skills and the init command from this plugin's own sources.
+  - **Codex** loads this repo's `.claude-plugin` manifests and `hooks/hooks.json`
+    natively (same events, `CLAUDE_PLUGIN_ROOT`); hooks were made Codex-aware:
+    `apply_patch` edits (supervisor scope, report-only writes at the hard limit),
+    rollout token usage (`.jsonl`/`.zst`, cumulative totals), sub-agent rollouts found
+    by thread id.
+  - **OpenCode** gets a generated plugin (`hosts/opencode/agentic-agile.js`) that maps
+    its hooks onto the same scripts: deny by throwing, context appended to tool output,
+    `session.abort` for the hard stop, the role gate on the `task` result (a block
+    re-prompts the sub-agent up to 3 rounds), usage written Claude-shaped for the ledger,
+    the handoff in the system prompt, `bin/` on PATH via `shell.env`.
+  - **Worker isolation without built-in worktrees:** `agentic task-worktree add
+    <TASK_ID>` + the worker's first command `agentic bind <path>`; `host-adapter` then
+    confines it (Codex: commands/patches outside the worktree are denied; OpenCode:
+    rewritten into it) and the SubagentStop gate runs inside the bound worktree.
+  - `agentic` — one dispatcher for every tool (`agentic selfcheck`, `agentic init …`),
+    linked into `~/.local/bin` where the host has no plugin PATH.
+  - `_usage.py` — one token reader for all three hosts (budget + ledger).
+  - CI job `hosts`: Codex hook-runner emulation (14 checks) + OpenCode plugin against a
+    mock client (18 checks) — `make test-hosts`.
+
 ### Changed
 - **The hard-limit kill is deterministic:** after one chance to write its report and 3
   refused calls, the time-box hook stops the worker itself (PostToolUse

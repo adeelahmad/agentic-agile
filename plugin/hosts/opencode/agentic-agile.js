@@ -1,0 +1,253 @@
+// agentic-agile for OpenCode.
+// Installed by `agentic install opencode` (it replaces __AGENTIC_ROOT__ with this plugin's
+// absolute path). Maps OpenCode's plugin hooks onto the SAME scripts Claude Code and Codex
+// run from hooks/hooks.json, so gates, time boxes, the token ledger, stats and the handoff
+// behave identically on every host:
+//
+//   Claude Code hook   OpenCode equivalent used here
+//   SessionStart       event session.created (root session) → ensure-tools, session-start;
+//                      the context is added to that session's system prompt
+//   UserPromptSubmit   chat.message on a root session → transcripts prompt
+//   PreToolUse         tool.execute.before → host-adapter, gate-supervisor-scope,
+//                      gate-commit-author, budget pre; a deny THROWS (the tool call fails
+//                      with the reason). Bound workers' commands/edits are REWRITTEN into
+//                      their worktree (bash workdir, file paths, patch headers).
+//   PostToolUse        tool.execute.after → transcripts record, budget post; context is
+//                      appended to the tool output; `continue: false` aborts the session
+//   SubagentStart      event session.created (child session) → host-adapter, transcripts
+//                      stage-in; gate-tooling on the worker's first tool call (role known)
+//   SubagentStop       tool.execute.after of the `task` tool → the role's gate; a block is
+//                      sent back to the sub-agent (it keeps working) up to 3 rounds, then
+//                      reported in the task result
+//   Stop               event session.idle (root session) → transcripts snapshot, stats hook;
+//                      a `decision: block` reason is prompted back into the session
+// Token usage: every completed assistant message is appended, Claude-shaped, to
+// .agentic/host/opencode/<root>.jsonl (sub-agents: <root>/subagents/agent-<id>.jsonl), so
+// the ledger and the time box read it like any Claude transcript.
+import { spawnSync } from "node:child_process"
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { dirname, isAbsolute, join, relative, resolve } from "node:path"
+
+const ROOT = "__AGENTIC_ROOT__"
+const BIN = join(ROOT, "bin")
+const WRITERS = new Set(["red-worker", "scaffolder", "green-worker"])
+const GATES = {
+  "red-worker": "gate-red-verify", scaffolder: "gate-scaffold-verify", "green-worker": "gate-green-verify",
+  "structural-reviewer": "gate-structural-integrity", "final-gate": "gate-final",
+  intake: "gate-intake", standards: "gate-standards-cited", planner: "gate-stage2-complete", archivist: "gate-memory",
+}
+const TOOL = { bash: "Bash", write: "Write", edit: "Edit", apply_patch: "apply_patch", read: "Read", task: "Agent" }
+const EDITS = new Set(["write", "edit", "apply_patch"])
+const GATE_ROUNDS = 3
+
+export const AgenticAgile = async ({ client, directory, worktree }) => {
+  const project = worktree || directory
+  const active = () => existsSync(join(project, "docs", "agents"))       // an agentic-agile project
+  const env = { ...process.env, AGENTIC_HOST: "opencode", PATH: `${BIN}:${process.env.PATH || ""}` }
+  const sessions = new Map()       // id -> { parentID, root, agent }
+  const startCtx = new Map()       // root id -> SessionStart additionalContext
+  const hostDir = join(project, ".agentic", "host", "opencode")
+  const safe = (s) => String(s || "").replace(/[^A-Za-z0-9_.-]/g, "_")
+
+  const run = (script, args, payload, cwd = project) => {
+    const r = spawnSync(join(BIN, script), args, { input: JSON.stringify(payload || {}), cwd, env, encoding: "utf8", timeout: 600000 })
+    let json = null
+    const last = (r.stdout || "").trim().split("\n").filter((l) => l.startsWith("{")).pop()
+    try { if (last) json = JSON.parse(last) } catch {}
+    return { code: r.status ?? 1, stdout: r.stdout || "", stderr: (r.stderr || "").trim(), json }
+  }
+  const denyOf = (res) => {
+    const h = res.json?.hookSpecificOutput
+    if (h?.permissionDecision === "deny") return h.permissionDecisionReason || "denied"
+    if (res.code === 2) return res.stderr || "blocked"
+    return null
+  }
+
+  async function info(id) {
+    if (sessions.has(id)) return sessions.get(id)
+    let parentID = null
+    try { parentID = (await client.session.get({ path: { id } })).data?.parentID || null } catch {}
+    const s = { parentID, root: id, agent: null }
+    sessions.set(id, s)
+    if (parentID) s.root = (await info(parentID)).root
+    return s
+  }
+  const transcriptOf = (s, id) =>
+    s.parentID ? join(hostDir, s.root, "subagents", `agent-${safe(id)}.jsonl`) : join(hostDir, `${safe(id)}.jsonl`)
+  async function payload(event, sessionID, extra = {}) {
+    const s = await info(sessionID)
+    const p = { hook_event_name: event, session_id: s.root, transcript_path: join(hostDir, `${safe(s.root)}.jsonl`), cwd: project, ...extra }
+    if (s.parentID) { p.agent_id = sessionID; p.agent_type = s.agent || "" }
+    return p
+  }
+  const bound = (id) => {
+    try { return JSON.parse(readFileSync(join(project, ".agentic", "state", "agents", `${safe(id)}.json`), "utf8")).worktree || "" } catch { return "" }
+  }
+  const toolInput = (tool, a) =>
+    tool === "bash" ? { command: a.command, workdir: a.workdir }
+      : tool === "apply_patch" ? { command: a.patchText || "" }
+        : { file_path: a.filePath, ...a }
+  // Map a path into the worker's worktree: relative → under wt; project-absolute → same path in wt.
+  const intoWt = (p, wt) => {
+    if (!p) return p
+    if (!isAbsolute(p)) return join(wt, p)
+    const r = resolve(p)
+    if (r === wt || r.startsWith(wt + "/")) return r
+    const rel = relative(project, r)
+    return rel.startsWith("..") ? r : join(wt, rel)
+  }
+
+  async function subagentStop(childID, parentSessionID) {
+    const s = await info(childID)
+    const role = s.agent || ""
+    const p = await payload("SubagentStop", childID)
+    run("host-adapter", ["hook"], p)
+    let verdict = null
+    const gate = GATES[role]
+    for (let round = 0; gate && round <= GATE_ROUNDS; round++) {
+      const res = run(gate, [], p, bound(childID) || project)
+      if (res.code !== 2) { verdict = null; break }
+      verdict = res.stderr
+      if (round === GATE_ROUNDS) break
+      // Claude semantics: a blocked stop sends the reason back and the sub-agent keeps working.
+      try {
+        await client.session.prompt({ path: { id: childID }, body: { agent: role || undefined,
+          parts: [{ type: "text", text: `[agentic-agile gate ${gate}] Your stop was blocked:\n${verdict}\nFix it, run \`agentic selfcheck\`, then finish.` }] } })
+      } catch { break }
+    }
+    run("budget", ["hook", "stop"], p)
+    run("transcripts", ["stop"], p)
+    run("stats", ["hook"], p)
+    return verdict
+  }
+
+  return {
+    "shell.env": async (_input, output) => {
+      output.env.PATH = `${BIN}:${output.env.PATH || process.env.PATH || ""}`
+      output.env.AGENTIC_HOST = "opencode"
+    },
+
+    "chat.message": async (input, output) => {
+      if (!input.sessionID) return
+      const s = await info(input.sessionID)
+      if (input.agent) s.agent = input.agent
+      if (!active() || s.parentID) return
+      const text = (output.parts || []).filter((x) => x.type === "text").map((x) => x.text).join("\n")
+      if (text.startsWith("[agentic-agile")) return                     // our own injections
+      run("transcripts", ["prompt"], await payload("UserPromptSubmit", input.sessionID, { prompt: text }))
+    },
+
+    "experimental.chat.system.transform": async (input, output) => {
+      output.system.push("agentic-agile tools: call `agentic <tool>` (e.g. `agentic selfcheck`, `agentic stats show`); never search for them.")
+      if (!input.sessionID) return
+      const s = await info(input.sessionID)
+      const ctx = startCtx.get(s.root)
+      if (ctx && !s.parentID) output.system.push(ctx)
+    },
+
+    "tool.execute.before": async (input, output) => {
+      if (!active()) return
+      const s = await info(input.sessionID)
+      const args = output.args || {}
+      let p = await payload("PreToolUse", input.sessionID, { tool_name: TOOL[input.tool] || input.tool, tool_input: toolInput(input.tool, args) })
+      run("host-adapter", ["hook"], p)                                   // records `agentic bind`
+      const role = s.agent || ""
+      if (s.parentID && GATES[role] && WRITERS.has(role) && !s.toolingOk) {     // SubagentStart preflight
+        const why = denyOf(run("gate-tooling", [], p))
+        if (why) throw new Error(why)
+        s.toolingOk = true
+      }
+      const isBind = input.tool === "bash" && /\b(agentic\s+bind|bin\/bind)\s+\S+/.test(args.command || "")
+      if (s.parentID && WRITERS.has(role) && !isBind) {
+        const wt = bound(input.sessionID)
+        if (!wt && (input.tool === "bash" || EDITS.has(input.tool)))
+          throw new Error("agentic-agile isolation: bind your worktree first — your first command must be `agentic bind <worktree>` (the absolute path from your dispatch message).")
+        if (wt) {                                                        // confine to the worktree
+          if (input.tool === "bash") args.workdir = wt
+          if (input.tool === "write" || input.tool === "edit") args.filePath = intoWt(args.filePath, wt)
+          if (input.tool === "apply_patch" && args.patchText)
+            args.patchText = args.patchText.replace(/^(\*\*\* (?:Add|Update|Delete) File: |\*\*\* Move to: )(.+)$/gm, (_, h, f) => h + intoWt(f.trim(), wt))
+          p = await payload("PreToolUse", input.sessionID, { tool_name: TOOL[input.tool] || input.tool, tool_input: toolInput(input.tool, args) })
+        }
+      }
+      const checks = []
+      if (EDITS.has(input.tool)) checks.push(["gate-supervisor-scope", []])
+      if (input.tool === "bash") checks.push(["gate-commit-author", []])
+      checks.push(["budget", ["hook", "pre"]])
+      for (const [script, a] of checks) {
+        const why = denyOf(run(script, a, p))
+        if (why) throw new Error(why)
+      }
+    },
+
+    "tool.execute.after": async (input, output) => {
+      if (!active()) return
+      const p = await payload("PostToolUse", input.sessionID, {
+        tool_name: TOOL[input.tool] || input.tool, tool_input: toolInput(input.tool, input.args || {}), tool_response: output.output,
+      })
+      run("transcripts", ["record"], p)
+      const res = run("budget", ["hook", "post"], p)
+      const ctx = res.json?.hookSpecificOutput?.additionalContext
+      if (ctx) output.output = `${output.output || ""}\n\n[agentic-agile] ${ctx}`
+      if (res.json?.continue === false) {
+        try { await client.session.abort({ path: { id: input.sessionID } }) } catch {}
+      }
+      if (input.tool === "task") {
+        const child = output.metadata?.sessionId
+        if (child) {
+          const blocked = await subagentStop(child, input.sessionID)
+          if (blocked) output.output = `${output.output || ""}\n\n[agentic-agile gate] BLOCKED after ${GATE_ROUNDS} fix rounds — the sub-agent did not pass its gate:\n${blocked}\nApply the playbook's retry/escalate rule (re-dispatch with this feedback, or escalate).`
+        }
+      }
+    },
+
+    event: async ({ event }) => {
+      if (!active()) return
+      const props = event.properties || {}
+      if (event.type === "session.created" && props.info?.id) {
+        const id = props.info.id
+        sessions.delete(id)
+        const s = await info(id)
+        if (!s.parentID) {
+          const start = { hook_event_name: "SessionStart", cwd: project, source: "startup" }
+          const ctx = [run("ensure-tools", [], start), run("session-start", [], start)]
+            .map((r) => r.json?.hookSpecificOutput?.additionalContext).filter(Boolean).join("\n\n")
+          if (ctx) startCtx.set(id, ctx)
+        } else {
+          const p = await payload("SubagentStart", id)
+          run("host-adapter", ["hook"], p)
+          run("transcripts", ["stage-in"], p)
+        }
+      }
+      if (event.type === "message.updated") {
+        const m = props.info
+        if (!m || m.role !== "assistant" || !m.time?.completed || !m.tokens) return
+        const s = await info(m.sessionID)
+        if (m.mode && s.parentID) s.agent = s.agent || m.mode
+        const file = transcriptOf(s, m.sessionID)
+        mkdirSync(dirname(file), { recursive: true })
+        appendFileSync(file, JSON.stringify({
+          timestamp: new Date(m.time.completed).toISOString(),
+          message: { id: m.id, model: `${m.providerID}/${m.modelID}`, usage: {
+            input_tokens: m.tokens.input || 0, cache_read_input_tokens: m.tokens.cache?.read || 0,
+            cache_creation_input_tokens: m.tokens.cache?.write || 0,
+            output_tokens: (m.tokens.output || 0) + (m.tokens.reasoning || 0) } },
+        }) + "\n")
+        if (s.parentID) writeFileSync(file.replace(/\.jsonl$/, ".meta.json"), JSON.stringify({ agentType: s.agent || "" }))
+      }
+      if (event.type === "session.idle" && props.sessionID) {
+        const s = await info(props.sessionID)
+        if (s.parentID) return                                           // sub-agents: gated via the task result
+        const p = await payload("Stop", props.sessionID)
+        run("transcripts", ["snapshot"], p)
+        const res = run("stats", ["hook"], p)
+        if (res.json?.systemMessage) {
+          try { await client.tui.showToast({ body: { message: res.json.systemMessage, variant: "info" } }) } catch {}
+        }
+        if (res.json?.decision === "block" && res.json.reason) {
+          try { await client.session.prompt({ path: { id: props.sessionID }, body: { parts: [{ type: "text", text: res.json.reason }] } }) } catch {}
+        }
+      }
+    },
+  }
+}

@@ -20,6 +20,15 @@ DEFAULTS = {
     "COMMIT_AUTHOR_NAME": "",
     "COMMIT_AUTHOR_EMAIL": "",
     "CLAUDE_COAUTHOR": "no",
+    # Other hosts (agentic install codex|opencode). Empty = sensible default:
+    # Codex -> the session's model (Claude model ids don't exist there) at these efforts;
+    # OpenCode -> anthropic/<MODEL_PLANNING|MODEL_WORKER>.
+    "MODEL_PLANNING_CODEX": "",
+    "MODEL_WORKER_CODEX": "",
+    "EFFORT_PLANNING_CODEX": "high",
+    "EFFORT_WORKER_CODEX": "medium",
+    "MODEL_PLANNING_OPENCODE": "",
+    "MODEL_WORKER_OPENCODE": "",
 }
 NUMERIC = {"TOKENS_SOFT", "TOKENS_HARD", "TIME_SOFT_MIN", "TIME_HARD_MIN", "MAX_REPLANS"}
 SETTING = re.compile(r"^\s*(?:export\s+)?AGENTIC_([A-Z_]+)\s*=\s*['\"]?([^'\"#\n]*?)['\"]?\s*(?:#.*)?$")

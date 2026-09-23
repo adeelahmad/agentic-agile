@@ -11,15 +11,23 @@ disable-model-invocation: true
 
 **Do this now, in order.**
 
+## 0. Host
+
+On Claude Code nothing to do. On **Codex** or **OpenCode**, the human runs
+`agentic install codex` / `agentic install opencode` once (it generates the agents, skills
+and — for OpenCode — the plugin; see the agentic-agile skill's host table). If `agentic`
+is not found, the plugin isn't installed for this host yet — say so and stop.
+
 ## 1. Project settings — show the defaults, get the human's confirmation
 
 Run:
 
-    agentic-init --show
+    agentic init --show
 
 It prints a table of the proposed settings (the current ones if
 `docs/agents/defaults.md` already exists). Present that table to the human **as is**, then
-ask — with `AskUserQuestion`, one question per topic, the default first:
+ask — one question per topic, the default first (Claude Code: `AskUserQuestion`; OpenCode: the
+`question` tool; Codex: ask in chat and wait):
 
 1. **Limits** — per worker attempt: tokens soft/hard (default 40k / 60k), minutes
    soft/hard (10 / 15), re-plan cap (2). Keep the defaults, or which values?
@@ -38,7 +46,7 @@ that the human sees and confirms them.
 
 ## 2. Save them — the harness writes the file, not you
 
-    agentic-init --apply TOKENS_SOFT=… TOKENS_HARD=… TIME_SOFT_MIN=… TIME_HARD_MIN=… \
+    agentic init --apply TOKENS_SOFT=… TOKENS_HARD=… TIME_SOFT_MIN=… TIME_HARD_MIN=… \
       MAX_REPLANS=… MODEL_PLANNING=… MODEL_WORKER=… GITIGNORE=yes|no TRACK_DOCS=no|yes \
       COMMIT_AUTHOR_NAME="…" COMMIT_AUTHOR_EMAIL="…" CLAUDE_COAUTHOR=no|yes
 

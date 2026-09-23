@@ -1,8 +1,9 @@
 # CI — the checks `make ci` + `make validate` run, mirrored on every push/PR.
-# Documented in README.md ("Continuous integration"). Three independent jobs:
+# Documented in README.md ("Continuous integration"). Four independent jobs:
 #   rust       — ctx-symbols + md-db: fmt-check, clippy -D warnings, tests
 #   shellcheck — lints every gate script (errors fail the build)
 #   plugin     — JSON sanity + eval-suite validation + `claude plugin validate --strict`
+#   hosts      — Codex hooks emulation + OpenCode plugin end-to-end (no network, no tokens)
 name: CI
 
 on:
@@ -47,6 +48,22 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: Lint gate scripts
         run: make shellcheck
+
+  hosts:
+    name: hosts (codex hooks · opencode plugin)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Byte-compile the Python hook scripts
+        run: make pycheck
+      - name: Codex hooks emulation + OpenCode plugin end-to-end
+        run: make test-hosts
 
   plugin:
     name: plugin (json · evals · validate)

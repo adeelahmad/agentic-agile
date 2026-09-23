@@ -131,7 +131,7 @@ elif build_running; then
 else
   status="md-db/ctx-symbols are NOT installed and could not be built (no cargo?). Run \`make install\` or see $LOG. Planning still works (grep fallback); execution is blocked by gate-tooling."
 fi
-ctx="agentic-agile tools are on PATH — do NOT search for them. ${status}. Plugin scripts (selfcheck, budget, log-execution, transcripts, gate-*) are on PATH from $ROOT/bin; call them by bare name (e.g. \`selfcheck\`). Schemas: $ROOT/schemas/."
+ctx="agentic-agile tools — do NOT search for them. ${status}. Call every tool as \`agentic <tool>\` (e.g. \`agentic selfcheck\`, \`agentic budget status\`, \`agentic stats show\`; \`agentic --list\` shows them). If \`agentic\` is not on PATH use the absolute path $ROOT/bin/agentic. On Claude Code and OpenCode the bare names (\`selfcheck\`, \`md-db\`, …) work too. Schemas: $ROOT/schemas/."
 
 if command -v python3 >/dev/null 2>&1; then
   CTX="$ctx" python3 -c 'import json,os;print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":os.environ["CTX"]}}))'

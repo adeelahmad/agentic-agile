@@ -48,6 +48,10 @@ block the stop and feed the failure reason back to the supervisor.
 #    (for local dev, point marketplace add at your checkout instead: ./path/to/repo)
 ```
 
+**Codex / OpenCode:** `plugin/bin/agentic install codex` or `… install opencode` from a
+clone — full parity (hooks, agents, gates, time box, ledger, stats, handoff). See
+[`plugin/README.md` → Codex and OpenCode](plugin/README.md#codex-and-opencode).
+
 > **Staying current:** third-party marketplaces don't auto-update by default — run
 > `/plugin marketplace update agentic-agile-marketplace` (or enable auto-update in
 > `/plugin` → Marketplaces), then `/reload-plugins`. Step 1 (the Rust-built `ctx-symbols`

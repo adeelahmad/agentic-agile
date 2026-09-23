@@ -30,7 +30,9 @@ MANAGED_HEADER = "# agentic-agile (managed by agentic-init)"
 YESNO = {"GITIGNORE", "TRACK_DOCS", "CLAUDE_COAUTHOR"}
 ORDER = ["TOKENS_SOFT", "TOKENS_HARD", "TIME_SOFT_MIN", "TIME_HARD_MIN", "MAX_REPLANS",
          "MODEL_PLANNING", "MODEL_WORKER", "GITIGNORE", "TRACK_DOCS",
-         "COMMIT_AUTHOR_NAME", "COMMIT_AUTHOR_EMAIL", "CLAUDE_COAUTHOR"]
+         "COMMIT_AUTHOR_NAME", "COMMIT_AUTHOR_EMAIL", "CLAUDE_COAUTHOR",
+         "MODEL_PLANNING_CODEX", "MODEL_WORKER_CODEX", "EFFORT_PLANNING_CODEX", "EFFORT_WORKER_CODEX",
+         "MODEL_PLANNING_OPENCODE", "MODEL_WORKER_OPENCODE"]
 EXPLAIN = {
     "TOKENS_SOFT": "tokens — worker is warned inside its tool results and told to wrap up",
     "TOKENS_HARD": "tokens — worker is stopped by the hook; its task is split by the planner",
@@ -44,6 +46,12 @@ EXPLAIN = {
     "COMMIT_AUTHOR_NAME": "git author/committer name for every commit (repo-local git config)",
     "COMMIT_AUTHOR_EMAIL": "git author/committer email",
     "CLAUDE_COAUTHOR": "allow 'Co-Authored-By: Claude' / 'Generated with Claude Code' in commits",
+    "MODEL_PLANNING_CODEX": "Codex planning agents' model (empty = the Codex session's model)",
+    "MODEL_WORKER_CODEX": "Codex workers' model (empty = the Codex session's model)",
+    "EFFORT_PLANNING_CODEX": "Codex planning agents' reasoning effort",
+    "EFFORT_WORKER_CODEX": "Codex workers' reasoning effort",
+    "MODEL_PLANNING_OPENCODE": "OpenCode planning agents' model (empty = anthropic/<MODEL_PLANNING>)",
+    "MODEL_WORKER_OPENCODE": "OpenCode workers' model (empty = anthropic/<MODEL_WORKER>)",
 }
 
 
@@ -112,7 +120,8 @@ def show(cwd):
     print("| Setting | Value | Meaning |")
     print("|---|---|---|")
     for k in ORDER:
-        print("| %s | %s | %s |" % (k, vals[k] if vals[k] != "" else "(unset — git config has none)", EXPLAIN[k]))
+        empty = "(unset — git config has none)" if k.startswith("COMMIT_") else "(default)"
+        print("| %s | %s | %s |" % (k, vals[k] if vals[k] != "" else empty, EXPLAIN[k]))
     print()
     if str(vals["GITIGNORE"]).lower() == "yes":
         print("`.gitignore` changes (%s): add %s" % (os.path.join(root, ".gitignore"), ", ".join("`%s`" % l for l in ignore_lines(vals))))
@@ -121,7 +130,7 @@ def show(cwd):
               " untracking the existing ones needs `git rm -r --cached docs/agents` (ask the human)." % len(tracked.splitlines()))
     print()
     print("Ask the human to confirm or change each value (limits, models, the .gitignore edit, the"
-          " commit author, tracking docs/agents/), then run: agentic-init --apply KEY=VALUE ...")
+          " commit author, tracking docs/agents/), then run: agentic init --apply KEY=VALUE ...")
     return 0
 
 
@@ -177,6 +186,16 @@ def apply(cwd, pairs):
             git(cwd, "config", "--local", cfg, vals[key])
             print("  git config --local %s %s" % (cfg, vals[key]))
     _paths.home(cwd)                                 # create .agentic/ now that it is ignored
+    try:                                             # keep Codex / OpenCode agents in step
+        import importlib.machinery
+        import importlib.util
+        loader = importlib.machinery.SourceFileLoader("agentic_install", os.path.join(os.path.dirname(os.path.realpath(__file__)), "install"))
+        spec = importlib.util.spec_from_loader("agentic_install", loader)
+        mod = importlib.util.module_from_spec(spec)
+        loader.exec_module(mod)
+        mod.rerender(_paths.project(cwd))
+    except Exception as e:                           # never fail init over a host refresh
+        print("  (host re-render skipped: %s)" % e)
     return 0
 
 
